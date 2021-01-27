@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
-    mobile = models.CharField(max_length=13, default=None, null=True)
+    mobile = models.CharField(max_length=13, default=None, null=True, unique=True)
     role = models.CharField(choices=(('Mentor', 'Mentor'), ('Engineer', 'Engineer'), ('Admin', 'Admin')),
                             max_length=10)
 

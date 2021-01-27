@@ -10,7 +10,7 @@ class Course(models.Model):
         return self.course_name
 
 
-class Mentors(models.Model):
+class Mentor(models.Model):
     mentor = models.ForeignKey(User, on_delete=models.CASCADE)
     course = models.ManyToManyField(to=Course, blank=True, null=True)
 
@@ -53,7 +53,7 @@ class Education(models.Model):
 
 class Performance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    mentor = models.ForeignKey(Mentors, on_delete=models.SET_NULL, null=True)
+    mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     score = models.FloatField(default=None, null=True)
 

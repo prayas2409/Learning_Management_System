@@ -41,7 +41,11 @@ INSTALLED_APPS = [
     'Auth.apps.AuthConfig',
     'Management.apps.ManagementConfig',
     'drf_yasg',
+    'rest_framework'
 ]
+
+REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

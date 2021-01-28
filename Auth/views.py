@@ -6,10 +6,13 @@ from .permissions import isAdmin
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
+from django.utils.decorators import method_decorator
+from .middlewares import SessionAuthentication
 import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
 
+@method_decorator(SessionAuthentication, name='dispatch')
 class UserRegistrationView(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = (isAdmin,)

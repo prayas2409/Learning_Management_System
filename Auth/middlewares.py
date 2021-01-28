@@ -8,5 +8,5 @@ class SessionAuthentication(object):
 
     def __call__(self, request):
         if not JWTAuth.verifyToken(request.session.get(request.user.username)):
-            return redirect('/user/login/')
+            return redirect(f'/user/login/?next={request.path}')
         return self.get_response(request)

@@ -51,3 +51,13 @@ class UserLoginView(GenericAPIView):
             request.session[username] = JWTAuth.getToken(username=username, password=password)
             return Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
         return Response({'response': 'Bad credential found'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class UserLogoutView(GenericAPIView):
+    def delete(self, request):
+        """This API is used to log user out and to clear the user session
+        """
+        request.session.pop(request.user.username)
+        logout(request)
+        return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)

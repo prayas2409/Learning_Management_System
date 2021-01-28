@@ -3,12 +3,12 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from .serializers import UserSerializer, UserLoginSerializer
 from .permissions import isAdmin
-import sys
-sys.path.append('..')
-from LMS.mailConfirmation import Email
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
+import sys
+sys.path.append('..')
+from LMS.mailConfirmation import Email
 
 class UserRegistrationView(GenericAPIView):
     serializer_class = UserSerializer
@@ -45,7 +45,6 @@ class UserLoginView(GenericAPIView):
         user = authenticate(request, username=username, password=password)
         if user:
             login(request, user)
-            request.session['username'] = JWTAuth.getToken(username=username, password=password)
+            request.session[username] = JWTAuth.getToken(username=username, password=password)
             return Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
         return Response({'response': 'Bad credential found'}, status=status.HTTP_401_UNAUTHORIZED)
-

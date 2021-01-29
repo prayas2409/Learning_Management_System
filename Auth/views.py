@@ -1,7 +1,8 @@
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from .serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer
+from .serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, \
+    ForgotPasswordSerializer, ResetPasswordSerializer
 from .permissions import isAdmin
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
@@ -9,7 +10,9 @@ from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
 from .middlewares import SessionAuthentication
 from django.contrib.auth.hashers import check_password
+from .models import User
 import sys
+
 sys.path.append('..')
 from LMS.mailConfirmation import Email
 
@@ -82,3 +85,61 @@ class ChangeUserPasswordView(GenericAPIView):
             request.user.save()
             return Response({'response': 'Your password is changed successfully!'}, status=status.HTTP_200_OK)
         return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class ForgotPasswordView(GenericAPIView):
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request):
+        """This API is used to send reset password link to user email id
+        @param request: user email id
+        @return: password reset link with jwt token
+        """
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = User.objects.get(email=serializer.data.get('email'))
+        except User.DoesNotExist:
+            return Response({'response': 'Email not found'}, status=status.HTTP_404_NOT_FOUND)
+        email_data = {
+            'user': user,
+            'site': get_current_site(request).domain,
+            'token': JWTAuth.getToken(username=user.username, password=user.password)
+        }
+        Email.sendEmail(Email.configurePasswordRestEmail(email_data))
+        return Response({'response': 'Password reset link is sent to your mail'}, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(GenericAPIView):
+    serializer_class = ResetPasswordSerializer
+
+    def get(self, request, token):
+        """This API is used to validate the jwt token present in the password reset link
+        @param token: jwt token
+        """
+        jwtTokenData = JWTAuth.verifyToken(token)
+        if jwtTokenData:
+            return Response({'response': token}, status=status.HTTP_200_OK)
+        return Response({'response': 'Invalid link found'}, status=status.HTTP_403_FORBIDDEN)
+
+    def put(self, request, token):
+        """This API is used to reset the user password after validating jwt token and its payload
+        @param token: jwt token
+        """
+        serializer = self.serializer_class(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        jwtData = JWTAuth.verifyToken(token)
+        if jwtData:
+            username = jwtData.get('username')
+            password = jwtData.get('password')
+        else:
+            return Response({'response': 'Invalid link found'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            user = User.objects.get(username=username)
+            if password == user.password:
+                user.set_password(raw_password=serializer.data.get('new_password'))
+                user.save()
+                return Response({'response': 'Your Password is reset'}, status=status.HTTP_200_OK)
+            return Response({'response': 'Password does not match'}, status=status.HTTP_401_UNAUTHORIZED)
+        except User.DoesNotExist:
+            return Response({'response': 'User not found!'}, status=status.HTTP_404_NOT_FOUND)

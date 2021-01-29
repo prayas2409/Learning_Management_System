@@ -39,3 +39,17 @@ class ChangeUserPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Password does not Match!")
         return data
 
+
+class ForgotPasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email']
+
+class ResetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(min_length=6, max_length=16, required=True)
+    confirm_password = serializers.CharField(min_length=6, max_length=16, required=True)
+
+    def validate(self, data):
+        if data.get('new_password') != data.get('confirm_password'):
+            raise serializers.ValidationError("Password does not match!")
+        return data

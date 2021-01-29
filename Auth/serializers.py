@@ -28,3 +28,14 @@ class UserSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=10, min_length=3, required=True)
     password = serializers.CharField(max_length=20, min_length=6, required=True)
+
+class ChangeUserPasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(max_length=15, min_length=6)
+    new_password = serializers.CharField(max_length=15, min_length=6)
+    confirm_password = serializers.CharField(max_length=15, min_length=6)
+
+    def validate(self, data):
+        if data.get('new_password') != data.get('confirm_password'):
+            raise serializers.ValidationError("Password does not Match!")
+        return data
+

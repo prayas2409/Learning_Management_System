@@ -1,16 +1,18 @@
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from .serializers import UserSerializer, UserLoginSerializer
+from .serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer
 from .permissions import isAdmin
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
 from .middlewares import SessionAuthentication
+from django.contrib.auth.hashers import check_password
 import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
+
 
 @method_decorator(SessionAuthentication, name='dispatch')
 class UserRegistrationView(GenericAPIView):
@@ -61,3 +63,22 @@ class UserLogoutView(GenericAPIView):
         request.session.pop(request.user.username)
         logout(request)
         return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class ChangeUserPasswordView(GenericAPIView):
+    serializer_class = ChangeUserPasswordSerializer
+
+    def put(self, request):
+        """This API is used to change user password
+        @request_parms = old password, new password and confirm password
+        @rtype: saves new password in database
+        """
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        old_password = serializer.data.get('old_password')
+        if check_password(old_password, request.user.password):
+            request.user.set_password(raw_password=serializer.data.get('new_password'))
+            request.user.save()
+            return Response({'response': 'Your password is changed successfully!'}, status=status.HTTP_200_OK)
+        return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)

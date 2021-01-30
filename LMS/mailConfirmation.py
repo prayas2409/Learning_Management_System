@@ -6,7 +6,7 @@ from django.urls import reverse
 class Email:
     @staticmethod
     def configureAddUserEmail(data):
-        absoluteURL = "http://" + data['site'] + '/' + reverse('login')
+        absoluteURL = "http://" + data['site'] + reverse('login') + '?token=' + data['token']
         email_body = f"Hi {data['name']}! You are added as a new {data['role']} " \
                      f"\n Please login with the following credential \n" \
                      f" Username: {data['username']}, password: {data['password']} \n" \

@@ -8,11 +8,10 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
-from .middlewares import SessionAuthentication
+from .middlewares import SessionAuthentication, SessionAuthenticationOnFirstAccess
 from django.contrib.auth.hashers import check_password
 from .models import User
 import sys
-
 sys.path.append('..')
 from LMS.mailConfirmation import Email
 
@@ -36,7 +35,8 @@ class UserRegistrationView(GenericAPIView):
             'password': request.data['password'],
             'role': request.data['role'],
             'email': request.data['email'],
-            'site': get_current_site(request).domain
+            'site': get_current_site(request).domain,
+            'token': JWTAuth.getToken(username=request.data['username'], password=request.data['password'])
         }
         Email.sendEmail(Email.configureAddUserEmail(data))
         return Response({'response': f"A new {request.data['role']} is added"}, status=status.HTTP_201_CREATED)
@@ -46,12 +46,24 @@ class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
 
     def post(self, request):
+        """This API is used to log user in
+        @param request: basic credential
+        @return: logs user in
+        """
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.data.get('username')
         password = serializer.data.get('password')
         user = authenticate(request, username=username, password=password)
         if user:
+            if user.is_first_time_login:
+                token = request.GET.get('token')
+                if JWTAuth.verifyToken(token):
+                    login(request, user)
+                    return Response({'response': 'You are logged in! Now you need to change password to access resources',
+                                     'token': token}, status=status.HTTP_200_OK)
+                return Response({'response': 'You need to use the link shared in your mail for the first time'},
+                                status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
             request.session[username] = JWTAuth.getToken(username=username, password=password)
             return Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
@@ -143,3 +155,32 @@ class ResetPasswordView(GenericAPIView):
             return Response({'response': 'Password does not match'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
             return Response({'response': 'User not found!'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(SessionAuthenticationOnFirstAccess, name='dispatch')
+class ChangePasswordOnFirstAccess(GenericAPIView):
+    serializer_class = ChangeUserPasswordSerializer
+    #
+    def get(self, request, token):
+        if JWTAuth.verifyToken(token):
+            return Response({'response': 'link is Valid'}, status=status.HTTP_202_ACCEPTED)
+        return Response({'response': 'link is invalid'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    def put(self, request, token):
+        """This API is used to change user password on first access
+        @request_parms = old password, new password and confirm password
+        @rtype: saves new password in database and allows to access other resources
+        """
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        old_password = serializer.data.get('old_password')
+        if JWTAuth.verifyToken(token):
+            if check_password(old_password, request.user.password):
+                request.user.set_password(raw_password=serializer.data.get('new_password'))
+                request.user.is_first_time_login = False
+                request.user.save()
+                return Response({'response': 'Your password is changed successfully! Now You can access resources'},
+                                status=status.HTTP_200_OK)
+            return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
+

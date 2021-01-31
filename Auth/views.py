@@ -72,10 +72,11 @@ class UserLoginView(GenericAPIView):
 
 @method_decorator(SessionAuthentication, name='dispatch')
 class UserLogoutView(GenericAPIView):
-    def delete(self, request):
+    def get(self, request):
         """This API is used to log user out and to clear the user session
         """
-        request.session.pop(request.user.username)
+        if request.session.get(request.user.username):
+            request.session.pop(request.user.username)
         logout(request)
         return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)
 

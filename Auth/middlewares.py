@@ -30,3 +30,14 @@ class SessionAuthenticationOnFirstAccess(object):
         if jtwData and request.user.is_authenticated:
             return self.get_response(request, token)
         return JsonResponse({'response': 'You are not logged in!'}, status=status.HTTP_403_FORBIDDEN)
+
+
+class CantAccessAfterLogin(object):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            return JsonResponse({'response': 'You need to logout to access this this resource'},
+                                status=status.HTTP_406_NOT_ACCEPTABLE)
+        return self.get_response(request)

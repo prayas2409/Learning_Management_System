@@ -15,6 +15,7 @@ import random
 import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
+from LMS.loggerConfig import log
 
 
 @method_decorator(SessionAuthentication, name='dispatch')
@@ -26,6 +27,7 @@ class UserRegistrationView(GenericAPIView):
         """This API is used to inform the client that the request is genuine and the client can serve the registration page
         @return: return genuine Admin request
         """
+        log.info('Admin Request for Add user API')
         return Response({'response': 'Admin request'}, status=status.HTTP_202_ACCEPTED)
 
     def post(self, request):
@@ -52,6 +54,14 @@ class UserRegistrationView(GenericAPIView):
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
+
+    def get(self, request):
+        """This API is used to inform the client that its a genuine login request and it can serve the login interface
+        @param request: login request
+        @return: informs client about genuine request
+        """
+        if not request.user.is_authenticated:
+            return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
 
     def post(self, request):
         """This API is used to log user in

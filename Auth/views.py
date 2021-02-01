@@ -48,6 +48,7 @@ class UserRegistrationView(GenericAPIView):
             'token': JWTAuth.getToken(username=request.data['username'], password=request.data['password'])
         }
         Email.sendEmail(Email.configureAddUserEmail(data))
+        log.info(f"Registration is done and mail is sent to {request.data['email']}")
         return Response({'response': f"A new {request.data['role']} is added"}, status=status.HTTP_201_CREATED)
 
 

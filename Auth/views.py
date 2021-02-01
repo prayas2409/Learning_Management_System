@@ -8,9 +8,10 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
-from .middlewares import SessionAuthentication, SessionAuthenticationOnFirstAccess
+from .middlewares import SessionAuthentication, SessionAuthenticationOnFirstAccess, CantAccessAfterLogin
 from django.contrib.auth.hashers import check_password
 from .models import User
+import random
 import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
@@ -161,8 +162,13 @@ class ResetPasswordView(GenericAPIView):
 @method_decorator(SessionAuthenticationOnFirstAccess, name='dispatch')
 class ChangePasswordOnFirstAccess(GenericAPIView):
     serializer_class = ChangeUserPasswordSerializer
-    #
+
     def get(self, request, token):
+        """This API is used to validate the chnage_password_on_first_login link and to inform client whether the
+        client should serve the page or not
+        @param token: jwt token
+        @return: validates the link
+        """
         if JWTAuth.verifyToken(token):
             return Response({'response': 'link is Valid'}, status=status.HTTP_202_ACCEPTED)
         return Response({'response': 'link is invalid'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -185,3 +191,36 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
             return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
 
+
+@method_decorator(CantAccessAfterLogin, name='dispatch')
+class RequestNewLoginLinkWithTokenView(GenericAPIView):
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request):
+        """This API is used to generate new login link with token if the first link sent by the admin gets expired
+        @param request: user email
+        @return: sends new link to user email
+        """
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.data.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'response': 'This Mail id is not registered'}, status=status.HTTP_404_NOT_FOUND)
+        if user and user.is_first_time_login:
+            password = str(random.randint(100000, 999999))
+            user.set_password(raw_password=password)
+            user.save()
+            data = {
+                'name': user.get_full_name(),
+                'username': user.username,
+                'password': password,
+                'role': user.role,
+                'email': user.email,
+                'site': get_current_site(request).domain,
+                'token': JWTAuth.getToken(username=user.username, password=user.password)
+            }
+            Email.sendEmail(Email.configureAddUserEmail(data))
+            return Response({'response': 'New login link is shared on your mail'}, status=status.HTTP_200_OK)
+        return Response({'response': 'Not applicable for you!'}, status=status.HTTP_406_NOT_ACCEPTABLE)

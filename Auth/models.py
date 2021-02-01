@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils.timezone import now
 
 
 class User(AbstractUser):
@@ -10,3 +11,8 @@ class User(AbstractUser):
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+
+class TokenBlackList(models.Model):
+    token = models.CharField(max_length=300)
+    time = models.DateTimeField(default=now)

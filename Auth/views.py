@@ -22,6 +22,12 @@ class UserRegistrationView(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = (isAdmin,)
 
+    def get(self, request):
+        """This API is used to inform the client that the request is genuine and the client can serve the registration page
+        @return: return genuine Admin request
+        """
+        return Response({'response': 'Admin request'}, status=status.HTTP_202_ACCEPTED)
+
     def post(self, request):
         """This API is used to Add user like Mentor,Engineer or another Admin to the system by an Admin
          and informs the user about their account creation via email

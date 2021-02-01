@@ -12,6 +12,7 @@ from .middlewares import SessionAuthentication, SessionAuthenticationOnFirstAcce
 from django.contrib.auth.hashers import check_password
 from .models import User
 import random
+from django.urls import reverse
 import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
@@ -80,7 +81,8 @@ class UserLoginView(GenericAPIView):
                 if JWTAuth.verifyToken(token):
                     login(request, user)
                     return Response({'response': 'You are logged in! Now you need to change password to access resources',
-                                     'token': token}, status=status.HTTP_200_OK)
+                                     'link': reverse('change-password-on-first-access',
+                                                                                 args=[token])}, status=status.HTTP_200_OK)
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)

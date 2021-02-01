@@ -49,6 +49,7 @@ class UserRegistrationView(GenericAPIView):
         return Response({'response': f"A new {request.data['role']} is added"}, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
 
@@ -107,6 +108,7 @@ class ChangeUserPasswordView(GenericAPIView):
         return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+@method_decorator(CantAccessAfterLogin, name='dispatch')
 class ForgotPasswordView(GenericAPIView):
     serializer_class = ForgotPasswordSerializer
 
@@ -130,6 +132,7 @@ class ForgotPasswordView(GenericAPIView):
         return Response({'response': 'Password reset link is sent to your mail'}, status=status.HTTP_200_OK)
 
 
+@method_decorator(CantAccessAfterLogin, name='dispatch')
 class ResetPasswordView(GenericAPIView):
     serializer_class = ResetPasswordSerializer
 

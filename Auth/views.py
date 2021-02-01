@@ -175,6 +175,12 @@ class ResetPasswordView(GenericAPIView):
         """This API is used to reset the user password after validating jwt token and its payload
         @param token: jwt token
         """
+        try:
+            blacklist_token = TokenBlackList.objects.get(token=token)
+        except TokenBlackList.DoesNotExist:
+            blacklist_token = None
+        if blacklist_token:
+            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         serializer = self.serializer_class(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         jwtData = JWTAuth.verifyToken(token)

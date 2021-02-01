@@ -197,7 +197,7 @@ class ResetPasswordView(GenericAPIView):
 
 @method_decorator(SessionAuthenticationOnFirstAccess, name='dispatch')
 class ChangePasswordOnFirstAccess(GenericAPIView):
-    serializer_class = ChangeUserPasswordSerializer
+    serializer_class = ResetPasswordSerializer
 
     def get(self, request, token):
         """This API is used to validate the chnage_password_on_first_login link and to inform client whether the
@@ -220,18 +220,21 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         @request_parms = old password, new password and confirm password
         @rtype: saves new password in database and allows to access other resources
         """
+        try:
+            blacklist_token = TokenBlackList.objects.get(token=token)
+        except TokenBlackList.DoesNotExist:
+            blacklist_token = None
+        if blacklist_token:
+            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        old_password = serializer.data.get('old_password')
         if JWTAuth.verifyToken(token):
-            if check_password(old_password, request.user.password):
-                request.user.set_password(raw_password=serializer.data.get('new_password'))
-                request.user.is_first_time_login = False
-                request.user.save()
-                TokenBlackList.objects.create(token=token)
-                return Response({'response': 'Your password is changed successfully! Now You can access resources'},
+            request.user.set_password(raw_password=serializer.data.get('new_password'))
+            request.user.is_first_time_login = False
+            request.user.save()
+            TokenBlackList.objects.create(token=token)
+            return Response({'response': 'Your password is changed successfully! Now You can access resources'},
                                 status=status.HTTP_200_OK)
-            return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
 
 

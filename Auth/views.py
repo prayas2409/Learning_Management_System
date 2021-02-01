@@ -10,7 +10,7 @@ from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
 from .middlewares import SessionAuthentication, SessionAuthenticationOnFirstAccess, CantAccessAfterLogin
 from django.contrib.auth.hashers import check_password
-from .models import User
+from .models import User, TokenBlackList
 import random
 from django.urls import reverse
 import sys
@@ -63,6 +63,13 @@ class UserLoginView(GenericAPIView):
         @return: informs client about genuine request
         """
         if not request.user.is_authenticated:
+            token = request.GET.get('token')
+            try:
+                blacklist_token = TokenBlackList.objects.get(token=token)
+            except TokenBlackList.DoesNotExist:
+                blacklist_token = None
+            if blacklist_token:
+                return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
             return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
 
     def post(self, request):
@@ -153,6 +160,12 @@ class ResetPasswordView(GenericAPIView):
         """This API is used to validate the jwt token present in the password reset link
         @param token: jwt token
         """
+        try:
+            blacklist_token = TokenBlackList.objects.get(token=token)
+        except TokenBlackList.DoesNotExist:
+            blacklist_token = None
+        if blacklist_token:
+            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         jwtTokenData = JWTAuth.verifyToken(token)
         if jwtTokenData:
             return Response({'response': token}, status=status.HTTP_200_OK)
@@ -175,6 +188,7 @@ class ResetPasswordView(GenericAPIView):
             if password == user.password:
                 user.set_password(raw_password=serializer.data.get('new_password'))
                 user.save()
+                TokenBlackList.objects.create(token=token)
                 return Response({'response': 'Your Password is reset'}, status=status.HTTP_200_OK)
             return Response({'response': 'Password does not match'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
@@ -191,6 +205,12 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         @param token: jwt token
         @return: validates the link
         """
+        try:
+            blacklist_token = TokenBlackList.objects.get(token=token)
+        except TokenBlackList.DoesNotExist:
+            blacklist_token = None
+        if blacklist_token:
+            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         if JWTAuth.verifyToken(token):
             return Response({'response': 'link is Valid'}, status=status.HTTP_202_ACCEPTED)
         return Response({'response': 'link is invalid'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -208,6 +228,7 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
                 request.user.set_password(raw_password=serializer.data.get('new_password'))
                 request.user.is_first_time_login = False
                 request.user.save()
+                TokenBlackList.objects.create(token=token)
                 return Response({'response': 'Your password is changed successfully! Now You can access resources'},
                                 status=status.HTTP_200_OK)
             return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)

@@ -19,9 +19,16 @@ class TestAuthApp(TestCase):
             'last_name': 'Last',
             'email': 'birumnna@gmail.com',
             'mobile': '9915518024',
+            'role': 'Admin'
+        }
+        self.valid_normal_user_payload = {
+            'username': 'test_user',
+            'first_name': 'Test',
+            'last_name': 'Last',
+            'email': 'birumnna@gmail.com',
+            'mobile': '9915518024',
             'role': 'Engineer'
         }
-
         self.invalid_payload = {
             'username': 'test_user',
             'first_name': 'Test',
@@ -29,6 +36,7 @@ class TestAuthApp(TestCase):
             'email': 'birumnna@gmail.com',
             'mobile': '9915518024',
         }
+        self.new_password = 'birajit123'
 
     def adminLogin(self):
         self.valid_admin_credential = json.dumps({
@@ -92,6 +100,7 @@ class TestAuthApp(TestCase):
                                     content_type='application/json')
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(response.data['response'], 'You are logged in! Now you need to change password to access resources')
+        return response
 
     def test_user_login_when_credential_is_invalid_and_login_link_is_used_with_token_for_first_time(self):
         self.adminLogin()
@@ -102,4 +111,34 @@ class TestAuthApp(TestCase):
         response = self.client.post(f'/user/login/?token={token}', data=json.dumps({'username': 'xyzaa', 'password': 'zopaaaa'}),
                                     content_type='application/json')
         self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        
+
+    def test_change_password_after_first_login_using_the_token_sent_on_mail(self):
+        login_response = self.test_user_login_when_login_link_is_used_with_token_for_first_time()
+        data = json.dumps({
+            'new_password':self.new_password,
+            'confirm_password':self.new_password
+        })
+        response = self.client.put(login_response.data['link'], data=data, content_type='application/json')
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+    def test_cant_access_other_resorce_before_changing_password(self):
+        self.test_user_login_when_login_link_is_used_with_token_for_first_time()
+        response = self.client.get(reverse('add-user'))
+        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_can_access_resorcess_after_changing_password_on_first_login(self):
+        self.test_change_password_after_first_login_using_the_token_sent_on_mail()
+        data = json.dumps({
+            'username': 'test_user',
+            'password': self.new_password
+        })
+        self.client.post(reverse('login'), data=data, content_type='application/json')
+        response = self.client.get(reverse('add-user'))
+        self.assertEquals(response.status_code, status.HTTP_202_ACCEPTED)
+
+    def test_when_logged_in_with_non_admin_user_cant_access_admin_resorce(self):
+        User.objects.create_user(username='test_user', password='123456', role='Engineer', mobile='9915518025')
+        self.client.post(reverse('login'), data=json.dumps({'username': 'test_user', 'password': '123456'}),
+                         content_type='application/json')
+        response = self.client.get(reverse('add-user'))
+        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)

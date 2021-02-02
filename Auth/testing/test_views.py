@@ -142,3 +142,36 @@ class TestAuthApp(TestCase):
                          content_type='application/json')
         response = self.client.get(reverse('add-user'))
         self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_forgot_password_when_given_mail_is_present_in_DB_and_user_is_not_logged_in(self):
+        user = User.objects.create_user(username='test_user', password='123456',
+                                        email='birajit95@gmail.com', mobile='9915518024')
+        valid_data = json.dumps({
+            'email': user.email
+        })
+        response = self.client.post(reverse('forgot-password'), data=valid_data, content_type='application/json')
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+    def test_forgot_password_when_given_mail_is_not_present_in_DB_and_user_is_not_logged_in(self):
+        User.objects.create_user(username='test_user', password='123456',
+                                        email='birajit95@gmail.com', mobile='9915518024')
+        valid_data = json.dumps({
+            'email': 'xyz@gmail.com'
+        })
+        response = self.client.post(reverse('forgot-password'), data=valid_data, content_type='application/json')
+        self.assertEquals(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_forgot_password_when_given_invalid_mail_id_and_user_is_not_logged_in(self):
+        invalid_data = json.dumps({
+            'email': 'xyzgmail.com'
+        })
+        response = self.client.post(reverse('forgot-password'), data=invalid_data, content_type='application/json')
+        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_access_forgot_password_when_user_is_logged_in(self):
+        self.adminLogin()
+        valid_data = json.dumps({
+            'email': 'birajit@gmail.com'
+        })
+        response = self.client.post(reverse('forgot-password'), data=valid_data, content_type='application/json')
+        self.assertEquals(response.status_code, status.HTTP_406_NOT_ACCEPTABLE)

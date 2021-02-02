@@ -8,7 +8,8 @@ import json
 
 class TestAuthApp(TestCase):
     def setUp(self):
-        user = User.objects.create_user(username='birajit', password='birajit123', role='Admin',
+        # Admin user
+        User.objects.create_user(username='birajit', password='birajit123', role='Admin',
                                         is_first_time_login=False)
         self.client = Client()
 
@@ -18,9 +19,7 @@ class TestAuthApp(TestCase):
             'last_name': 'Last',
             'email': 'birumnna@gmail.com',
             'mobile': '9915518024',
-            'role': 'Engineer',
-            'password': '123456',
-            'confirm_password': '123456'
+            'role': 'Engineer'
         }
 
         self.invalid_payload = {
@@ -29,8 +28,6 @@ class TestAuthApp(TestCase):
             'last_name': 'Last',
             'email': 'birumnna@gmail.com',
             'mobile': '9915518024',
-            'password': '123456',
-            'confirm_password': '123456'
         }
 
     def adminLogin(self):

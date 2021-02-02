@@ -93,7 +93,7 @@ class UserLoginView(GenericAPIView):
                     return Response({'response': 'You are logged in! Now you need to change password to access resources',
                                      'link': reverse('change-password-on-first-access',
                                                                                  args=[token])}, status=status.HTTP_200_OK)
-                log('Need to use the link shared in mail')
+                log.info('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)

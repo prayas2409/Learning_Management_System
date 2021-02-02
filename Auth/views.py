@@ -234,9 +234,12 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         except TokenBlackList.DoesNotExist:
             blacklist_token = None
         if blacklist_token:
+            log.info('This link is already used')
             return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         if JWTAuth.verifyToken(token):
+            log.info('valid link')
             return Response({'response': 'link is Valid'}, status=status.HTTP_202_ACCEPTED)
+        log.info('invalid link')
         return Response({'response': 'link is invalid'}, status=status.HTTP_401_UNAUTHORIZED)
 
     def put(self, request, token):
@@ -249,6 +252,7 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         except TokenBlackList.DoesNotExist:
             blacklist_token = None
         if blacklist_token:
+            log.info('This link is already used')
             return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -257,8 +261,10 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
             request.user.is_first_time_login = False
             request.user.save()
             TokenBlackList.objects.create(token=token)
+            log.info('password is changed successfully')
             return Response({'response': 'Your password is changed successfully! Now You can access resources'},
                                 status=status.HTTP_200_OK)
+        log.info('This link is expired')
         return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
 
 

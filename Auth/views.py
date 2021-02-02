@@ -112,6 +112,7 @@ class UserLogoutView(GenericAPIView):
         if request.session.get(request.user.username):
             request.session.pop(request.user.username)
         logout(request)
+        log.info('logout successful')
         return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -130,7 +131,9 @@ class ChangeUserPasswordView(GenericAPIView):
         if check_password(old_password, request.user.password):
             request.user.set_password(raw_password=serializer.data.get('new_password'))
             request.user.save()
+            log.info('password changed successfully')
             return Response({'response': 'Your password is changed successfully!'}, status=status.HTTP_200_OK)
+        log.info('Old password does not match')
         return Response({'response': 'Old password does not match!'}, status=status.HTTP_401_UNAUTHORIZED)
 
 

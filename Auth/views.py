@@ -283,6 +283,7 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
+            log.info('This mail id is not registered')
             return Response({'response': 'This Mail id is not registered'}, status=status.HTTP_404_NOT_FOUND)
         if user and user.is_first_time_login:
             password = str(random.randint(100000, 999999))
@@ -298,5 +299,7 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
                 'token': JWTAuth.getToken(username=user.username, password=user.password)
             }
             Email.sendEmail(Email.configureAddUserEmail(data))
+            log.info('new login link is shared on mail')
             return Response({'response': 'New login link is shared on your mail'}, status=status.HTTP_200_OK)
+        log.info('not applicable for this user')
         return Response({'response': 'Not applicable for you!'}, status=status.HTTP_406_NOT_ACCEPTABLE)

@@ -151,6 +151,7 @@ class ForgotPasswordView(GenericAPIView):
         try:
             user = User.objects.get(email=serializer.data.get('email'))
         except User.DoesNotExist:
+            log.info("email id not found")
             return Response({'response': 'Email not found'}, status=status.HTTP_404_NOT_FOUND)
         email_data = {
             'user': user,
@@ -158,6 +159,7 @@ class ForgotPasswordView(GenericAPIView):
             'token': JWTAuth.getToken(username=user.username, password=user.password)
         }
         Email.sendEmail(Email.configurePasswordRestEmail(email_data))
+        log.info('reset password link is sent to mail')
         return Response({'response': 'Password reset link is sent to your mail'}, status=status.HTTP_200_OK)
 
 
@@ -174,10 +176,12 @@ class ResetPasswordView(GenericAPIView):
         except TokenBlackList.DoesNotExist:
             blacklist_token = None
         if blacklist_token:
+            log.info('This link is already used')
             return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         jwtTokenData = JWTAuth.verifyToken(token)
         if jwtTokenData:
             return Response({'response': token}, status=status.HTTP_200_OK)
+        log.info('invalid link request')
         return Response({'response': 'Invalid link found'}, status=status.HTTP_403_FORBIDDEN)
 
     def put(self, request, token):
@@ -189,6 +193,7 @@ class ResetPasswordView(GenericAPIView):
         except TokenBlackList.DoesNotExist:
             blacklist_token = None
         if blacklist_token:
+            log.info('This link is already used')
             return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
         serializer = self.serializer_class(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -197,6 +202,7 @@ class ResetPasswordView(GenericAPIView):
             username = jwtData.get('username')
             password = jwtData.get('password')
         else:
+            log.info('Invalid link request')
             return Response({'response': 'Invalid link found'}, status=status.HTTP_401_UNAUTHORIZED)
         try:
             user = User.objects.get(username=username)
@@ -204,9 +210,12 @@ class ResetPasswordView(GenericAPIView):
                 user.set_password(raw_password=serializer.data.get('new_password'))
                 user.save()
                 TokenBlackList.objects.create(token=token)
+                log.info('Password is reset')
                 return Response({'response': 'Your Password is reset'}, status=status.HTTP_200_OK)
+            log.info('password does not match')
             return Response({'response': 'Password does not match'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
+            log.info('User not found')
             return Response({'response': 'User not found!'}, status=status.HTTP_404_NOT_FOUND)
 
 

@@ -8,13 +8,13 @@ class SessionAuthentication(object):
     def __init__(self, get_response):
         self.get_response = get_response
 
-    def __call__(self, request):
+    def __call__(self, request, *args, **kwargs):
         jtwData = JWTAuth.verifyToken(request.session.get(request.user.username))
         if request.user.is_authenticated:
             if request.resolver_match.url_name == 'logout':
-                return self.get_response(request)
+                return self.get_response(request, *args, **kwargs)
             if jtwData:
-                return self.get_response(request)
+                return self.get_response(request, *args, **kwargs)
             return JsonResponse({'response': 'You need to change password to access this resource'},
                                 status=status.HTTP_403_FORBIDDEN)
         return JsonResponse({'response': 'You have to login to access this resource',

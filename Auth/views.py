@@ -69,7 +69,9 @@ class UserLoginView(GenericAPIView):
             except TokenBlackList.DoesNotExist:
                 blacklist_token = None
             if blacklist_token:
+                log.info('This login link is already used')
                 return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            log.info('Valid login page request')
             return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
 
     def post(self, request):
@@ -87,14 +89,18 @@ class UserLoginView(GenericAPIView):
                 token = request.GET.get('token')
                 if JWTAuth.verifyToken(token):
                     login(request, user)
+                    log.info('login successful but need to change password')
                     return Response({'response': 'You are logged in! Now you need to change password to access resources',
                                      'link': reverse('change-password-on-first-access',
                                                                                  args=[token])}, status=status.HTTP_200_OK)
+                log('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
+            log.info('successful login')
             request.session[username] = JWTAuth.getToken(username=username, password=password)
             return Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
+        log.info('bad credential found')
         return Response({'response': 'Bad credential found'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
@@ -223,7 +229,7 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
 
     def put(self, request, token):
         """This API is used to change user password on first access
-        @request_parms = old password, new password and confirm password
+        @request_parms : new password and confirm password
         @rtype: saves new password in database and allows to access other resources
         """
         try:

@@ -38,19 +38,28 @@ class UserRegistrationView(GenericAPIView):
         """
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        username = serializer.data.get('username')
+        first_name = serializer.data.get('first_name')
+        last_name = serializer.data.get('last_name')
+        email = serializer.data.get('email')
+        mobile = serializer.data.get('mobile')
+        role = serializer.data.get('role')
+        password = str(random.randint(100000, 999999))
+        user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name,
+                                        email=email, mobile=mobile, role=role, password=password)
         data = {
-            'name': f"{request.data['first_name']} {request.data['last_name']}",
-            'username': request.data['username'],
-            'password': request.data['password'],
-            'role': request.data['role'],
-            'email': request.data['email'],
+            'name': user.get_full_name(),
+            'username': user.username,
+            'password': password,
+            'role': user.role,
+            'email': user.email,
             'site': get_current_site(request).domain,
-            'token': JWTAuth.getToken(username=request.data['username'], password=request.data['password'])
+            'token': JWTAuth.getToken(username=user.username, password=user.password)
         }
         Email.sendEmail(Email.configureAddUserEmail(data))
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
-        return Response({'response': f"A new {request.data['role']} is added"}, status=status.HTTP_201_CREATED)
+        return Response({'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
+                         'token': data['token']}, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')

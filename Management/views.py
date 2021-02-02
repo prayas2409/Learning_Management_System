@@ -48,3 +48,43 @@ class AllCoursesAPIView(GenericAPIView):
         log.info('All courses are retrieved')
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class UpdateCourseAPIView(GenericAPIView):
+    permission_classes = [isAdmin]
+    serializer_class = CourseSerializer
+
+    def put(self, request, id):
+        try:
+            course = Course.objects.get(id=id)
+        except Course.DoesNotExist:
+            log.info('course not found')
+            return Response({'response': 'Course with given id does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.serializer_class(instance=course, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save()
+            return Response({'response': 'Course is updated'}, status=status.HTTP_200_OK)
+        except IntegrityError:
+            log.info('duplicate course entry is blocked')
+            return Response({'response': f"{serializer.data.get('course_name')} is already present"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class DeleteCourseAPIView(GenericAPIView):
+    serializer_class = CourseSerializer
+    permission_classes = [isAdmin]
+
+    def delete(self, request, id):
+        """This API is used to delete course by id by admin
+        @return: deletes course from database
+        """
+        try:
+            course = Course.objects.get(id=id)
+            course.delete()
+            return Response({'response': f"{course.course_name} is deleted"})
+        except Course.DoesNotExist:
+            log.info("course not found")
+            return Response({'response': 'Course not found with this id'})
+

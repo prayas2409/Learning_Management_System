@@ -4,10 +4,9 @@ from rest_framework.response import Response
 from .models import Course, Mentor
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
-from .serializers import CourseSerializer, CourseMentorSerializer
+from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer
 
 import sys
-
 sys.path.append('..')
 from Auth.permissions import isAdmin
 from Auth.middlewares import SessionAuthentication
@@ -136,3 +135,18 @@ class DeleteCourseFromMentorListAPIView(GenericAPIView):
             log.info('Course removed')
             return Response({'response': f"{course.course_name} is removed"}, status=status.HTTP_200_OK)
         return Response({'response': f"{course.course_name} is not in {mentor.mentor.get_full_name()}'s course list"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class AllMentorDetailsAPIView(GenericAPIView):
+    serializer_class = MentorSerializer
+    permission_classes = [isAdmin]
+    queryset = Mentor.objects.all()
+
+    def get(self, request):
+        serializer = self.serializer_class(self.queryset.all(), many=True)
+        if len(serializer.data) == 0:
+            log.info("Mentors list empty")
+            return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
+        log.info("Mentors retrieved")
+        return Response({'response': serializer.data}, status=status.HTTP_200_OK)

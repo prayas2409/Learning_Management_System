@@ -18,3 +18,12 @@ class CourseMentorSerializer(serializers.ModelSerializer):
         model = Mentor
         fields = ['mentor', 'course']
         extra_kwargs = {'mentor': {'read_only': True}}
+
+
+class MentorSerializer(serializers.ModelSerializer):
+    mentor = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True, many=True)
+
+    class Meta:
+        model = Mentor
+        fields = ['id', 'mentor', 'course']

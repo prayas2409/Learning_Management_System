@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from .models import Course, Mentor
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
-from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer
+from .serializers import CourseSerializer, CourseMentorSerializer
 
 import sys
 sys.path.append('..')
@@ -89,6 +89,7 @@ class DeleteCourseAPIView(GenericAPIView):
             return Response({'response': 'Course not found with this id'})
 
 
+@method_decorator(SessionAuthentication, name='dispatch')
 class CourseToMentorMapAPIView(GenericAPIView):
     permission_classes = [isAdmin]
     serializer_class = CourseMentorSerializer

@@ -9,6 +9,9 @@ class User(AbstractUser):
                             max_length=10)
     is_first_time_login = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.get_full_name()
+
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
 

@@ -14,7 +14,7 @@ class Course(models.Model):
 
 class Mentor(models.Model):
     mentor = models.OneToOneField(User, on_delete=models.CASCADE)
-    course = models.ManyToManyField(to=Course, blank=True, null=True)
+    course = models.ManyToManyField(to=Course, related_name='course_mentor')
 
     def __str__(self):
         return self.mentor.get_full_name()

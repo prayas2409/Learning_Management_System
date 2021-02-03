@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from .models import Course, Mentor
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
-from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer
+from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer
 
 import sys
 sys.path.append('..')
@@ -150,3 +150,20 @@ class AllMentorDetailsAPIView(GenericAPIView):
             return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
         log.info("Mentors retrieved")
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class MentorDetailsAPIView(GenericAPIView):
+    serializer_class = MentorSerializer
+    permission_classes = [isAdmin]
+
+    def get(self, request, mentor_id):
+        try:
+            mentor = Mentor.objects.get(id=mentor_id)
+        except Mentor.DoesNotExist:
+            return Response({'response': f"Mentor with id {mentor_id} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        mentorSerializerDict = dict(MentorSerializer(mentor).data)
+        userSerializer = UserSerializer(mentor.mentor)
+        mentorSerializerDict.update(userSerializer.data)
+        return Response({'response': mentorSerializerDict}, status=status.HTTP_200_OK)
+

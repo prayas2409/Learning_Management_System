@@ -10,5 +10,7 @@ urlpatterns = [
     path('course-mentor/<int:mentor_id>/<int:course_id>/', views.DeleteCourseFromMentorListAPIView.as_view(),
          name='delete-mentor-course'),
     path('mentors/', views.AllMentorDetailsAPIView.as_view(), name='mentors'),
+    path('mentors/<int:mentor_id>', views.MentorDetailsAPIView.as_view(), name='mentor'),
+
 ]
 

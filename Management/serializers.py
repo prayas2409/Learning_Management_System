@@ -1,5 +1,8 @@
 from rest_framework import serializers
 from .models import Course, Mentor
+import sys
+sys.path.append('..')
+from Auth.models import User
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -27,3 +30,9 @@ class MentorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mentor
         fields = ['id', 'mentor', 'course']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'mobile', 'role']

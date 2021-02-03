@@ -1,10 +1,10 @@
 from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Course
+from .models import Course, Mentor
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
-from .serializers import CourseSerializer
+from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer
 
 import sys
 sys.path.append('..')
@@ -29,7 +29,7 @@ class AddCourseAPIView(GenericAPIView):
             serializer.save()
         except IntegrityError:
             log.info('duplicate course entry is blocked')
-            return Response({'response': f"{serializer.data.get('course_name')} is already present"},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'response': f"{serializer.data.get('course_name')} is already present"}, status=status.HTTP_400_BAD_REQUEST)
         log.info('Course is added')
         return Response({'response': f"{serializer.data.get('course_name')} is added in course"}, status=status.HTTP_201_CREATED)
 
@@ -87,4 +87,28 @@ class DeleteCourseAPIView(GenericAPIView):
         except Course.DoesNotExist:
             log.info("course not found")
             return Response({'response': 'Course not found with this id'})
+
+
+class CourseToMentorMapAPIView(GenericAPIView):
+    permission_classes = [isAdmin]
+    serializer_class = CourseMentorSerializer
+
+    def put(self, request, mentor_id):
+        """This API is used to update course to mentor"""
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            mentor = Mentor.objects.get(id=mentor_id)
+        except Mentor.DoesNotExist:
+            log.info('mentor does not exist')
+            return Response({'response': 'Mentor id does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        for course_id in serializer.data.get('course'):
+            for mentor_course in mentor.course.all():
+                if course_id == mentor_course.id:
+                    log.info('duplicate entry found')
+                    return Response({'response': 'This course is already added'}, status=status.HTTP_400_BAD_REQUEST)
+            mentor.course.add(course_id)
+        log.info('new course added to mentor')
+        return Response({'response': f" New course added to {mentor}'s course list"})
+
 

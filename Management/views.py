@@ -7,6 +7,7 @@ from rest_framework.generics import GenericAPIView
 from .serializers import CourseSerializer, CourseMentorSerializer
 
 import sys
+
 sys.path.append('..')
 from Auth.permissions import isAdmin
 from Auth.middlewares import SessionAuthentication
@@ -29,9 +30,11 @@ class AddCourseAPIView(GenericAPIView):
             serializer.save()
         except IntegrityError:
             log.info('duplicate course entry is blocked')
-            return Response({'response': f"{serializer.data.get('course_name')} is already present"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'response': f"{serializer.data.get('course_name')} is already present"},
+                            status=status.HTTP_400_BAD_REQUEST)
         log.info('Course is added')
-        return Response({'response': f"{serializer.data.get('course_name')} is added in course"}, status=status.HTTP_201_CREATED)
+        return Response({'response': f"{serializer.data.get('course_name')} is added in course"},
+                        status=status.HTTP_201_CREATED)
 
 
 @method_decorator(SessionAuthentication, name='dispatch')
@@ -113,3 +116,23 @@ class CourseToMentorMapAPIView(GenericAPIView):
         return Response({'response': f" New course added to {mentor}'s course list"})
 
 
+@method_decorator(SessionAuthentication, name='dispatch')
+class DeleteCourseFromMentorListAPIView(GenericAPIView):
+    permission_classes = [isAdmin]
+
+    def delete(self, request, mentor_id, course_id):
+        try:
+            mentor = Mentor.objects.get(id=mentor_id)
+        except Mentor.DoesNotExist:
+            log.info('mentor does not exist')
+            return Response({'response': 'Mentor id does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            log.info(f'Course with id {course_id} not found')
+            return Response({'response': f'Course with this id {course_id} is not found'}, status=status.HTTP_404_NOT_FOUND)
+        if course in mentor.course.all():
+            mentor.course.remove(course_id)
+            log.info('Course removed')
+            return Response({'response': f"{course.course_name} is removed"}, status=status.HTTP_200_OK)
+        return Response({'response': f"{course.course_name} is not in {mentor.mentor.get_full_name()}'s course list"}, status=status.HTTP_404_NOT_FOUND)

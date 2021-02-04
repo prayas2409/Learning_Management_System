@@ -183,8 +183,11 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
         """This API is used to get student course mentor mapped records
         """
         serializer = StudentCourseMentorReadSerializer(self.queryset.all(), many=True)
+        if not serializer.data:
+            log.info('Records not found')
+            return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
         log.info('student course mentor mapped records fetched')
-        return Response(serializer.data)
+        return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
         """This API is used to post student course mentor mapped record
@@ -233,3 +236,24 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
         except StudentCourseMentor.DoesNotExist:
             log.info("record id not found")
             return Response({'response': f'record with id {record_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class GetMentorsForSpecificCourse(GenericAPIView):
+    serializer_class = MentorSerializer
+    permission_classes = [isAdmin]
+
+    def get(self, request, course_id):
+        """This API is used to fetch course oriented mentors
+        """
+        try:
+            course = Course.objects.get(id=course_id)
+            mentors = course.course_mentor.all()
+            serializer = self.serializer_class(mentors, many=True)
+            if not serializer.data:
+                log.info('Records not found')
+                return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+            log.info('mentor records of course is fetched')
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except Course.DoesNotExist:
+            return Response({'response': f'course with id {course_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)

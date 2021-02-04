@@ -9,7 +9,17 @@ class Course(models.Model):
     course_name = models.CharField(max_length=30, unique=True)
 
     def __str__(self):
-        return self.course_name
+        # return self.course_name
+        return str({
+            'id': self.id,
+            'name': self.course_name
+        })
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.course_name
+        }
 
 
 class Mentor(models.Model):
@@ -56,8 +66,10 @@ class Education(models.Model):
 
 class StudentCourseMentor(models.Model):
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
-    course = models.OneToOneField(Course, on_delete=models.SET_NULL, null=True)
-    mentor = models.OneToOneField(Mentor, on_delete=models.SET_NULL, null=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True)
+    mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True)
+    create_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_by')
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='updated_by')
 
 
 class Performance(models.Model):

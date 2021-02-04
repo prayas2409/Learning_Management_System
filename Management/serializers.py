@@ -59,7 +59,8 @@ class StudentCourseMentorReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentCourseMentor
-        fields = "__all__"
+        fields = ['id', 'student_id', 'mentor_id', 'course_id', 'student', 'mentor', 'course', 'create_by',
+                  'updated_by']
 
 
 class StudentCourseMentorUpdateSerializer(serializers.ModelSerializer):

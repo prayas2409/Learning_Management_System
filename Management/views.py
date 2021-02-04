@@ -193,6 +193,8 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         mentor = serializer.validated_data.get('mentor')
         course = serializer.validated_data.get('course')
+        if mentor is None or course is None:
+            return Response({'response': "Mentor or Course can not be Null"}, status=status.HTTP_400_BAD_REQUEST)
         if course in mentor.course.all():
             serializer.save()
             log.info('Record added')
@@ -220,6 +222,8 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
             serializer.is_valid(raise_exception=True)
             mentor = serializer.validated_data.get('mentor')
             course = serializer.validated_data.get('course')
+            if mentor is None or course is None:
+                return Response({'response': "Mentor or Course can not be Null"}, status=status.HTTP_400_BAD_REQUEST)
             if course in mentor.course.all():
                 serializer.save()
                 log.info('record updated')

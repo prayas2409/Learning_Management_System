@@ -278,6 +278,6 @@ class StudentsAPIView(GenericAPIView):
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
         serializerDict = self.serializer_class(query, many=True).data
         log.info(f"records retrieved by {request.user.role}")
-        return Response(serializerDict)
+        return Response({'response': serializerDict}, status=status.HTTP_200_OK)
 
 

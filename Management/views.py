@@ -5,11 +5,12 @@ from .models import Course, Mentor, StudentCourseMentor, Student
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
-    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer
+    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
+    StudentSerializer
 
 import sys
 sys.path.append('..')
-from Auth.permissions import isAdmin
+from Auth.permissions import isAdmin, isMentorOrAdmin
 from Auth.middlewares import SessionAuthentication
 from LMS.loggerConfig import log
 
@@ -257,3 +258,26 @@ class GetMentorsForSpecificCourse(GenericAPIView):
             return Response({'response': serializer.data}, status=status.HTTP_200_OK)
         except Course.DoesNotExist:
             return Response({'response': f'course with id {course_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class StudentsAPIView(GenericAPIView):
+    serializer_class = StudentSerializer
+    permission_classes = [isMentorOrAdmin]
+    queryset = StudentCourseMentor.objects.all()
+
+    def get(self, request):
+        """Using this API Admin can see all course assigned students and mentor can see his course assigned students
+        """
+        if request.user.role == 'Mentor':
+            query = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor_id=request.user))
+        else:
+            query = self.queryset.all()
+        if not query:
+            log.info("Records not found")
+            return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializerDict = self.serializer_class(query, many=True).data
+        log.info(f"records retrieved by {request.user.role}")
+        return Response(serializerDict)
+
+

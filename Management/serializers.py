@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, Mentor, StudentCourseMentor
+from .models import Course, Mentor, StudentCourseMentor, Student
 import sys
 
 sys.path.append('..')
@@ -40,7 +40,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class StudentCourseMentorSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = StudentCourseMentor
         fields = ['student', 'course', 'mentor', 'create_by']
@@ -72,3 +71,16 @@ class StudentCourseMentorUpdateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         data['updated_by'] = self.context['user']
         return data
+
+
+class StudentSerializer(serializers.ModelSerializer):
+    student = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+    mentor = serializers.StringRelatedField(read_only=True)
+    mentor_id = serializers.IntegerField()
+    course_id = serializers.IntegerField()
+
+    class Meta:
+        model = Student
+        fields = ['id', 'course_id', 'student_id', 'mentor_id', 'student', 'current_location',
+                  'year_of_experience', 'course', 'mentor']

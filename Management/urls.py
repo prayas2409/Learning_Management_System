@@ -16,5 +16,6 @@ urlpatterns = [
          name='student-course-mentor-update'),
     path('get-mentors-for-course/<course_id>/', views.GetMentorsForSpecificCourse.as_view(),
          name='get-mentors-for-course'),
+    path('students/', views.StudentsAPIView.as_view(), name='student')
 ]
 

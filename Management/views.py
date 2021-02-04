@@ -6,7 +6,8 @@ from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer
+    StudentSerializer, StudentBasicSerializer
+from rest_framework.permissions import AllowAny
 
 import sys
 sys.path.append('..')
@@ -263,7 +264,7 @@ class GetMentorsForSpecificCourse(GenericAPIView):
 @method_decorator(SessionAuthentication, name='dispatch')
 class StudentsAPIView(GenericAPIView):
     serializer_class = StudentSerializer
-    permission_classes = [isMentorOrAdmin]
+    permission_classes = [AllowAny,]
     queryset = StudentCourseMentor.objects.all()
 
     def get(self, request):
@@ -271,9 +272,15 @@ class StudentsAPIView(GenericAPIView):
         """
         if request.user.role == 'Mentor':
             query = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor_id=request.user))
+        elif request.user.role == 'Engineer':
+            student = Student.objects.get(student_id=request.user)
+            query = StudentCourseMentor.objects.filter(student=student)
         else:
             query = self.queryset.all()
         if not query:
+            if request.user.role == "Engineer":
+                student_serializer = StudentBasicSerializer(student)
+                return Response({'response': student_serializer.data}, status=status.HTTP_200_OK)
             log.info("Records not found")
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
         serializerDict = self.serializer_class(query, many=True).data

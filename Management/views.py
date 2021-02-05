@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Course, Mentor, StudentCourseMentor, Student
+from .models import Course, Mentor, StudentCourseMentor, Student, Education
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
@@ -11,7 +11,7 @@ from .serializers import CourseSerializer, CourseMentorSerializer, MentorSeriali
 
 import sys
 sys.path.append('..')
-from Auth.permissions import isAdmin, isMentorOrAdmin
+from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent
 from Auth.middlewares import SessionAuthentication
 from LMS.loggerConfig import log
 
@@ -298,19 +298,65 @@ class StudentDetailsAPIView(GenericAPIView):
         """This API is used to get Student details as well ass eduction details. Admin can see any student, mentor can see
         those student under him and student can see his own details
         """
+        basic_details_flag = True
         if request.resolver_match.url_name == 'education-details':
+            basic_details_flag = False
             self.serializer_class = EducationSerializer
+            self.queryset = Education.objects.all()
+
         try:
             if request.user.role == "Engineer":
-                student = Student.objects.get(student_id=request.user)
+                if basic_details_flag:
+                    student = Student.objects.get(student_id=request.user)
+                else:
+                    student = Education.objects.get(student_id=Student.objects.get(student_id=request.user))
             elif request.user.role == "Mentor":
                 student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.user),
                                                           student_id=student_id).student
+                if not basic_details_flag:
+                    student = Education.objects.get(student_id=student.id)
             else:
-                student = Student.objects.get(id=student_id)
+                student = self.queryset.get(id=student_id)
+
             serializer = self.serializer_class(student)
             log.info(f"Data accessed by {request.user.role}")
             return Response({'response': serializer.data}, status=status.HTTP_200_OK)
-        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist):
+        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
             log.info('Record not found')
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class StudentsDetailsUpdateAPIView(GenericAPIView):
+    serializer_class = StudentDetailsSerializer
+    permission_classes = [OnlyStudent]
+    queryset = Student.objects.all()
+
+    def get(self, request):
+        page_code = 100
+        if request.resolver_match.url_name == 'education-details-update':
+            self.serializer_class = EducationSerializer
+            page_code = 200
+        response = {
+            'page_code': page_code,
+            'url': request.path
+        }
+        return Response({'response': response})
+
+    def put(self, request):
+        basic_details_flag = True
+        if request.resolver_match.url_name == 'education-details-update':
+            self.serializer_class = EducationSerializer
+            self.queryset = Education.objects.all()
+            basic_details_flag = False
+
+        student = Student.objects.get(student_id=request.user)
+        if not basic_details_flag:
+            student = Education.objects.get(student_id=student.id)
+
+        serializer = self.serializer_class(instance=student, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save()
+        except Exception:
+            return Response({'response': "Some error occurred "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'response': 'Records updated'}, status=status.HTTP_200_OK)

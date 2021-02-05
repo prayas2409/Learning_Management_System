@@ -215,14 +215,14 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
     permission_classes = [isAdmin]
     queryset = StudentCourseMentor.objects.all()
 
-    def put(self, request, record_id):
+    def put(self, request, student_id):
         """This API is used to update student course mentor mapping
         @param request: Course id and mentor id
         @param record_id: record id of StudentCourseMentor model
         @return: updates record
         """
         try:
-            student = self.queryset.get(id=record_id)
+            student = self.queryset.get(student_id=student_id)
             serializer = StudentCourseMentorUpdateSerializer(instance=student, data=request.data, context={'user': request.user})
             serializer.is_valid(raise_exception=True)
             mentor = serializer.validated_data.get('mentor')

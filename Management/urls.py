@@ -12,7 +12,7 @@ urlpatterns = [
     path('mentors/', views.AllMentorDetailsAPIView.as_view(), name='mentors'),
     path('mentors/<int:mentor_id>/', views.MentorDetailsAPIView.as_view(), name='mentor'),
     path('student-course-mentor/', views.StudentCourseMentorMapAPIView.as_view(), name='student-course-mentor'),
-    path('student-course-mentor/<int:record_id>/', views.StudentCourseMentorUpdateAPIView.as_view(),
+    path('student-course-mentor/<int:student_id>/', views.StudentCourseMentorUpdateAPIView.as_view(),
          name='student-course-mentor-update'),
     path('get-mentors-for-course/<course_id>/', views.GetMentorsForSpecificCourse.as_view(),
          name='get-mentors-for-course'),

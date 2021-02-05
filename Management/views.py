@@ -7,7 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer
 
 import sys
 sys.path.append('..')
@@ -295,9 +295,11 @@ class StudentDetailsAPIView(GenericAPIView):
     queryset = Student.objects.all()
 
     def get(self, request, student_id):
-        """Using this API Mentor can see any students details, mentor can see details of the student who is under him and
-        student can his his own student details
+        """This API is used to get Student details as well ass eduction details. Admin can see any student, mentor can see
+        those student under him and student can see his own details
         """
+        if request.resolver_match.url_name == 'education-details':
+            self.serializer_class = EducationSerializer
         try:
             if request.user.role == "Engineer":
                 student = Student.objects.get(student_id=request.user)

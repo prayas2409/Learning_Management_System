@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, Mentor, StudentCourseMentor, Student
+from .models import Course, Mentor, StudentCourseMentor, Student, Education
 import sys
 
 sys.path.append('..')
@@ -101,4 +101,12 @@ class StudentDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Student
+        fields = "__all__"
+
+
+class EducationSerializer(serializers.ModelSerializer):
+    student = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Education
         fields = "__all__"

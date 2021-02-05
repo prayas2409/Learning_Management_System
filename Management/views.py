@@ -7,7 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializer
 
 import sys
 sys.path.append('..')
@@ -317,10 +317,18 @@ class StudentDetailsAPIView(GenericAPIView):
                     student = Education.objects.get(student_id=student.id)
             else:
                 student = self.queryset.get(id=student_id)
-
-            serializer = self.serializer_class(student)
+            serializer = dict(self.serializer_class(student).data)
+            if basic_details_flag:
+                userSerializer = UserSerializer(student.student).data
+                serializer.update(userSerializer)
+                try:
+                    student = StudentCourseMentor.objects.get(student_id=student.id)
+                    studentCourseSerializer = CourseMentorSerializer(student).data
+                    serializer.update(studentCourseSerializer)
+                except StudentCourseMentor.DoesNotExist:
+                    pass
             log.info(f"Data accessed by {request.user.role}")
-            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+            return Response({'response': serializer}, status=status.HTTP_200_OK)
         except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
             log.info('Record not found')
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)

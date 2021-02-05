@@ -108,3 +108,13 @@ class EducationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Education
         fields = "__all__"
+
+
+class CourseMentorSerializer(serializers.ModelSerializer):
+    student = serializers.StringRelatedField(read_only=True)
+    mentor = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = StudentCourseMentor
+        fields = ['id', 'student_id', 'mentor_id', 'course_id', 'student', 'mentor', 'course']

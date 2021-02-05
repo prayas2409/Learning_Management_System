@@ -82,9 +82,8 @@ class StudentSerializer(serializers.ModelSerializer):
     course_id = serializers.IntegerField()
 
     class Meta:
-        model = Student
-        fields = ['id', 'course_id', 'student_id', 'mentor_id', 'student', 'current_location',
-                  'year_of_experience', 'course', 'mentor']
+        model = StudentCourseMentor
+        fields = ['id', 'course_id', 'student_id', 'mentor_id', 'student', 'course', 'mentor']
 
 
 class StudentBasicSerializer(serializers.ModelSerializer):
@@ -92,8 +91,7 @@ class StudentBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Student
-        fields = ['id', 'student_id', 'student', 'current_location',
-                  'year_of_experience']
+        fields = ['id', 'student_id', 'student']
 
 
 class StudentDetailsSerializer(serializers.ModelSerializer):

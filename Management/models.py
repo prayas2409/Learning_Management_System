@@ -36,6 +36,7 @@ class Student(models.Model):
     current_address = models.CharField(max_length=100, default=None, null=True, blank=True)
     git_link = models.CharField(max_length=30, default=None, null=True, blank=True)
     year_of_experience = models.IntegerField(choices=year_of_experience, default=None, null=True)
+    course_assigned = models.BooleanField(default=False)
 
     def __str__(self):
         return self.student.get_full_name()

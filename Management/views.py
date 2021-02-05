@@ -4,10 +4,10 @@ from rest_framework.response import Response
 from .models import Course, Mentor, StudentCourseMentor, Student
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer
-from rest_framework.permissions import AllowAny
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer
 
 import sys
 sys.path.append('..')
@@ -269,6 +269,7 @@ class StudentsAPIView(GenericAPIView):
 
     def get(self, request):
         """Using this API Admin can see all course assigned students and mentor can see his course assigned students
+         and student can see his own record
         """
         if request.user.role == 'Mentor':
             query = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor_id=request.user))
@@ -288,3 +289,26 @@ class StudentsAPIView(GenericAPIView):
         return Response({'response': serializerDict}, status=status.HTTP_200_OK)
 
 
+class StudentDetailsAPIView(GenericAPIView):
+    serializer_class = StudentDetailsSerializer
+    permission_classes = [AllowAny]
+    queryset = Student.objects.all()
+
+    def get(self, request, student_id):
+        """Using this API Mentor can see any students details, mentor can see details of the student who is under him and
+        student can his his own student details
+        """
+        try:
+            if request.user.role == "Engineer":
+                student = Student.objects.get(student_id=request.user)
+            elif request.user.role == "Mentor":
+                student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.user),
+                                                          student_id=student_id).student
+            else:
+                student = Student.objects.get(id=student_id)
+            serializer = self.serializer_class(student)
+            log.info(f"Data accessed by {request.user.role}")
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist):
+            log.info('Record not found')
+            return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)

@@ -11,7 +11,7 @@ from .serializers import CourseSerializer, CourseMentorSerializer, MentorSeriali
 
 import sys
 sys.path.append('..')
-from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent
+from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent, Role
 from Auth.middlewares import SessionAuthentication
 from LMS.loggerConfig import log
 
@@ -271,15 +271,15 @@ class StudentsAPIView(GenericAPIView):
         """Using this API Admin can see all course assigned students and mentor can see his course assigned students
          and student can see his own record
         """
-        if request.user.role == 'Mentor':
+        if request.user.role == Role.MENTOR.value:
             query = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor_id=request.user))
-        elif request.user.role == 'Engineer':
+        elif request.user.role == Role.STUDENT.value:
             student = Student.objects.get(student_id=request.user)
             query = StudentCourseMentor.objects.filter(student=student)
         else:
             query = self.queryset.all()
         if not query:
-            if request.user.role == "Engineer":
+            if request.user.role == Role.STUDENT.value:
                 student_serializer = StudentBasicSerializer(student)
                 return Response({'response': student_serializer.data}, status=status.HTTP_200_OK)
             log.info("Records not found")
@@ -305,12 +305,12 @@ class StudentDetailsAPIView(GenericAPIView):
             self.queryset = Education.objects.all()
 
         try:
-            if request.user.role == "Engineer":
+            if request.user.role == Role.STUDENT.value:
                 if basic_details_flag:
                     student = Student.objects.get(student_id=request.user)
                 else:
                     student = Education.objects.get(student_id=Student.objects.get(student_id=request.user))
-            elif request.user.role == "Mentor":
+            elif request.user.role == Role.MENTOR.value:
                 student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.user),
                                                           student_id=student_id).student
                 if not basic_details_flag:

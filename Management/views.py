@@ -332,6 +332,8 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
     queryset = Student.objects.all()
 
     def get(self, request):
+        """This API is used to inform the client to serve the desired page
+        """
         page_code = 100
         if request.resolver_match.url_name == 'education-details-update':
             self.serializer_class = EducationSerializer
@@ -340,9 +342,12 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
             'page_code': page_code,
             'url': request.path
         }
+        log.info('Response is sent client')
         return Response({'response': response})
 
     def put(self, request):
+        """This API is used to update student basic details as well as education details
+        """
         basic_details_flag = True
         if request.resolver_match.url_name == 'education-details-update':
             self.serializer_class = EducationSerializer
@@ -358,5 +363,7 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
         try:
             serializer.save()
         except Exception:
+            log.info('Some error occurred')
             return Response({'response': "Some error occurred "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        log.info(f'Record updated by {request.user.role}')
         return Response({'response': 'Records updated'}, status=status.HTTP_200_OK)

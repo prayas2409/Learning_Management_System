@@ -9,17 +9,7 @@ class Course(models.Model):
     course_name = models.CharField(max_length=30, unique=True)
 
     def __str__(self):
-        # return self.course_name
-        return str({
-            'id': self.id,
-            'name': self.course_name
-        })
-
-    def __json__(self):
-        return {
-            'id': self.id,
-            'name': self.course_name
-        }
+        return self.course_name
 
 
 class Mentor(models.Model):

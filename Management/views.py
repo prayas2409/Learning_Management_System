@@ -7,7 +7,8 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializer
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializer, \
+    NewStudentsSerializer
 
 import sys
 sys.path.append('..')
@@ -198,10 +199,14 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         mentor = serializer.validated_data.get('mentor')
         course = serializer.validated_data.get('course')
+        student = serializer.validated_data.get('student')
+
         if mentor is None or course is None:
             return Response({'response': "Mentor or Course can not be Null"}, status=status.HTTP_400_BAD_REQUEST)
         if course in mentor.course.all():
             serializer.save()
+            student.course_assigned = True
+            student.save()
             log.info('Record added')
             return Response({'response': "Record added"}, status=status.HTTP_200_OK)
         log.info('course not in mentor bucket')
@@ -237,7 +242,7 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
                             status=status.HTTP_404_NOT_FOUND)
         except StudentCourseMentor.DoesNotExist:
             log.info("record id not found")
-            return Response({'response': f'record with id {record_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'response': f'record with id {student_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @method_decorator(SessionAuthentication, name='dispatch')
@@ -289,6 +294,7 @@ class StudentsAPIView(GenericAPIView):
         return Response({'response': serializerDict}, status=status.HTTP_200_OK)
 
 
+@method_decorator(SessionAuthentication, name='dispatch')
 class StudentDetailsAPIView(GenericAPIView):
     serializer_class = StudentDetailsSerializer
     permission_classes = [AllowAny]
@@ -334,6 +340,7 @@ class StudentDetailsAPIView(GenericAPIView):
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+@method_decorator(SessionAuthentication, name='dispatch')
 class StudentsDetailsUpdateAPIView(GenericAPIView):
     serializer_class = StudentDetailsSerializer
     permission_classes = [OnlyStudent]
@@ -375,3 +382,22 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
             return Response({'response': "Some error occurred "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         log.info(f'Record updated by {request.user.role}')
         return Response({'response': 'Records updated'}, status=status.HTTP_200_OK)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class NewStudents(GenericAPIView):
+    serializer_class = NewStudentsSerializer
+    permission_classes = [isAdmin]
+    queryset = Student.objects.all()
+
+    def get(self, request):
+        """Using this API admin will retrieve new students who have not been assigned to any course yet
+        @return : returns list of new students data
+        """
+        query = self.queryset.filter(course_assigned=False)
+        serializer = self.serializer_class(query, many=True)
+        if not serializer.data:
+            log.info('No records found')
+            return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
+        log.info(f'Records Retrieved by {request.user.role}')
+        return Response({'response': serializer.data}, status=status.HTTP_200_OK)

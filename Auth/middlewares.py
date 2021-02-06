@@ -18,7 +18,7 @@ class SessionAuthentication(object):
             return JsonResponse({'response': 'You need to change password to access this resource'},
                                 status=status.HTTP_403_FORBIDDEN)
         return JsonResponse({'response': 'You have to login to access this resource',
-                             'path': f"{reverse('login')}?next={request.path}"}, status=status.HTTP_403_FORBIDDEN)
+                             'path': f"{reverse('login')}?next={request.path}"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class SessionAuthenticationOnFirstAccess(object):

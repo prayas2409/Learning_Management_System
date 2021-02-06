@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, Mentor, StudentCourseMentor, Student, Education
+from .models import Course, Mentor, StudentCourseMentor, Student, Education, Performance
 import sys
 
 sys.path.append('..')
@@ -9,8 +9,8 @@ from Auth.models import User
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ['id', 'course_name']
-        extra_kwargs = {'id': {'read_only': True}}
+        fields = ['id', 'course_name', 'duration_weeks']
+        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}}
 
     def validate(self, data):
         data['course_name'] = data['course_name'].upper()
@@ -110,7 +110,7 @@ class EducationSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class CourseMentorSerializer(serializers.ModelSerializer):
+class CourseMentorSerializerDetails(serializers.ModelSerializer):
     student = serializers.StringRelatedField(read_only=True)
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
@@ -126,3 +126,22 @@ class NewStudentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ['id', 'student', 'course_assigned']
+
+
+class PerformanceSerializer(serializers.ModelSerializer):
+    student = serializers.StringRelatedField(read_only=True)
+    mentor = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+    update_by = serializers.StringRelatedField(read_only=True)
+    score = serializers.FloatField(max_value=10, min_value=1)
+    review_date = serializers.DateField(required=True)
+
+    class Meta:
+        model = Performance
+        fields = ['student_id', 'student',  'course_id', 'course', 'mentor_id', 'mentor', 'score', 'week_no',
+                  'review_date', 'update_by']
+        read_only_fields = ('student', 'week_no', 'mentor', 'course', 'update_by')
+
+    def validate(self, data):
+        data['update_by'] = self.context['user']
+        return data

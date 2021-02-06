@@ -1,14 +1,14 @@
 from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Course, Mentor, StudentCourseMentor, Student, Education
+from .models import Course, Mentor, StudentCourseMentor, Student, Education, Performance
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializer, \
-    NewStudentsSerializer
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
+    NewStudentsSerializer, PerformanceSerializer
 
 import sys
 sys.path.append('..')
@@ -329,7 +329,7 @@ class StudentDetailsAPIView(GenericAPIView):
                 serializer.update(userSerializer)
                 try:
                     student = StudentCourseMentor.objects.get(student_id=student.id)
-                    studentCourseSerializer = CourseMentorSerializer(student).data
+                    studentCourseSerializer = CourseMentorSerializerDetails(student).data
                     serializer.update(studentCourseSerializer)
                 except StudentCourseMentor.DoesNotExist:
                     pass
@@ -401,3 +401,73 @@ class NewStudents(GenericAPIView):
             return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
         log.info(f'Records Retrieved by {request.user.role}')
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class StudentPerformance(GenericAPIView):
+    serializer_class = PerformanceSerializer
+    permission_classes = [AllowAny]
+    queryset = Performance.objects.all()
+
+    def get(self, request, student_id):
+        """Using this API student can see his own all performance, mentor can see all students performance under him
+        and admin can see any students all performance
+        @param request: get request
+        @param student_id: students table's primary key
+        @return: performace records of specific student
+        """
+        try:
+            if request.user.role == Role.STUDENT.value:
+                student = Student.objects.get(student_id=request.user.id)
+                query = self.queryset.filter(student_id=student.id)
+            elif request.user.role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor_id=request.user.id)
+                query = self.queryset.filter(mentor_id=mentor.id, student_id=student_id)
+            else:
+                query = self.queryset.filter(student_id=student_id)
+            serializer = self.serializer_class(query, many=True)
+        except (Student.DoesNotExist, Mentor.DoesNotExist):
+            log.info('Records not found')
+            return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not serializer.data:
+            log.info('Records not found')
+            return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+        log.info(f'Records retrieved by {request.user.role}')
+        return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class StudentPerfromanceUpdate(GenericAPIView):
+    serializer_class = PerformanceSerializer
+    permission_classes = [isMentorOrAdmin]
+    queryset = Performance.objects.all()
+
+    def put(self, request, student_id, week_no):
+        """This API is used to update student's weekly performance either by mentor or admin
+        @param request: score, review_date
+        @param student_id: student primary key
+        @param week_no: review week number
+        @return: updates score
+        """
+        try:
+            if request.user.role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor_id=request.user.id)
+                student = self.queryset.get(mentor_id=mentor.id, student_id=student_id, week_no=week_no)
+            else:
+                student = self.queryset.get(student_id=student_id, week_no=week_no)
+
+            serializer = self.serializer_class(instance=student, data=request.data, context={'user': request.user})
+            serializer.is_valid(raise_exception=True)
+            if week_no > 1:
+                previous_record = self.queryset.get(student_id=student_id, week_no=week_no-1).score
+                if not previous_record:
+                    log.info('Need to update previous weeks first')
+                    return Response({'response': f'Need to update previous weeks first'}, status=status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+        except (Performance.DoesNotExist, Student.DoesNotExist, Mentor.DoesNotExist):
+            log.info('Records not found')
+            return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'response': f"Score updated for {student.student.student.get_full_name()}'s week {week_no} review"},
+                        status=status.HTTP_200_OK)
+
+

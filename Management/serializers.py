@@ -126,11 +126,25 @@ class EducationSerializer(serializers.ModelSerializer):
     from_date = serializers.DateField(required=True)
     till = serializers.DateField(required=True)
 
+    class Meta:
+        model = Education
+        fields = ['id', 'student_id', 'student', 'institute', 'degree', 'stream', 'percentage', 'from_date', 'till']
+
+    def validate(self, data):
+        data['student_id'] = self.context['student']    # storing logged in student id and returning with data
+        return data
+
+
+class EducationUpdateSerializer(serializers.ModelSerializer):
+    institute = serializers.CharField(required=True)
+    stream = serializers.CharField(required=True)
+    percentage = serializers.FloatField(required=True)
+    from_date = serializers.DateField(required=True)
+    till = serializers.DateField(required=True)
 
     class Meta:
         model = Education
-        fields = ['id','student_id', 'student', 'institute', 'degree', 'stream', 'percentage', 'from_date', 'till']
-        read_only_fields = ('degree',)
+        fields = ['institute', 'stream', 'percentage', 'from_date', 'till']
 
 
 class CourseMentorSerializerDetails(serializers.ModelSerializer):

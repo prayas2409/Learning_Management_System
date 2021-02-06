@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer
 
 import sys
 sys.path.append('..')
@@ -368,6 +368,9 @@ class EducationDetails(GenericAPIView):
     queryset = Education.objects.all()
 
     def get(self, request, student_id):
+        """Using this API admin can see any students educational details, mentor can see his own students details
+        student can see his own details
+        """
         try:
             if request.user.role == Role.STUDENT.value:
                 student = Student.objects.get(student_id=request.user.id)
@@ -379,27 +382,71 @@ class EducationDetails(GenericAPIView):
                 query = self.queryset.filter(student_id=student_id)
 
             serializer = self.serializer_class(query, many=True)
-            return Response(serializer.data)
-        except (Mentor.DoesNotExist, Student.DoesNotExist):
+            if not serializer.data:
+                log.info('serializer data is empty')
+                return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except (Mentor.DoesNotExist, Student.DoesNotExist) as e:
+            log.error(e)
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @method_decorator(SessionAuthentication, name='dispatch')
-class EducationDetailsUpdate(GenericAPIView):
+class EducationDetailsAdd(GenericAPIView):
     serializer_class = EducationSerializer
     permission_classes = [OnlyStudent]
     queryset = Education.objects.all()
 
+    def post(self, request):
+        """This API is used to add Education details of student. This API is accessible to student only
+        """
+        try:
+            student = Student.objects.get(student_id=request.user.id)
+            serializer = self.serializer_class(data=request.data, context={'student': student.id})
+            serializer.is_valid(raise_exception=True)
+            degree = serializer.validated_data.get('degree')
+            try:
+                Education.objects.get(student_id=student.id, degree=degree)
+                log.info('data is already present in database')
+                return Response({'response': f"{degree} data is already saved"}, status=status.HTTP_208_ALREADY_REPORTED)
+            except Education.DoesNotExist:
+                serializer.save()
+                log.info('data is saved')
+                return Response({'response': f"{degree} data is saved"}, status=status.HTTP_201_CREATED)
+        except Student.DoesNotExist as e:
+            log.error(e)
+            return Response({'response': 'Student record not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            log.error(e)
+            return Response({'response': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(SessionAuthentication, name='dispatch')
+class EducationDetailsUpdate(GenericAPIView):
+    serializer_class = EducationUpdateSerializer
+    permission_classes = [OnlyStudent]
+    queryset = Education.objects.all()
+
     def put(self, request, record_id):
+        """This API is used to update student educational details
+         @param record_id : Education table's primary key
+         @return: updates existing education record
+        """
         try:
             student = Student.objects.get(student_id=request.user.id)
             record = self.queryset.get(id=record_id, student_id=student.id)
             serializer = self.serializer_class(instance=record, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            log.info(f"{record.degree} record is updated")
             return Response({'response': f"{record.degree} records is update"}, status=status.HTTP_200_OK)
-        except Student.DoesNotExist:
+        except (Student.DoesNotExist, Education.DoesNotExist) as e:
+            log.error(e)
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            log.error(e)
+            print(e)
+            return Response({'response': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(SessionAuthentication, name='dispatch')

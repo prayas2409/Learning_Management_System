@@ -1,5 +1,6 @@
 from django.db import models
 import sys
+from .utils import Degree
 
 sys.path.append('..')
 from Auth.models import User
@@ -44,9 +45,17 @@ class Student(models.Model):
 
 
 class Education(models.Model):
+    degree_choice = (
+        (Degree.TENTH.value, Degree.TENTH.value),
+        (Degree.HS.value, Degree.HS.value),
+        (Degree.UG.value, Degree.UG.value),
+        (Degree.PG.value, Degree.PG.value),
+
+    )
+
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     institute = models.CharField(max_length=50, default=None, null=True, blank=True)
-    degree = models.CharField(max_length=50, default=None, null=True, blank=True)
+    degree = models.CharField(choices=degree_choice, max_length=10, default=None)
     stream = models.CharField(max_length=50, default=None, null=True, blank=True)
     percentage = models.FloatField(default=None, null=True, blank=True)
     from_date = models.DateField(default=None, blank=True, null=True)

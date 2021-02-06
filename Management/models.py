@@ -7,6 +7,7 @@ from Auth.models import User
 
 class Course(models.Model):
     course_name = models.CharField(max_length=30, unique=True)
+    duration_weeks = models.IntegerField(default=0, null=True)
 
     def __str__(self):
         return self.course_name
@@ -67,8 +68,13 @@ class Performance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    review_date = models.DateField(default=None)
-    score = models.FloatField()
+    score = models.FloatField(default=None, null=True)
+    review_date = models.DateField(default=None, null=True)
+    week_no = models.IntegerField(default=0, null=True)
+    update_by = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True, related_name='performance_update_by')
 
     def __str__(self):
         return self.student.student.get_full_name()
+
+    def get_average_score(self):
+        self.score

@@ -71,7 +71,7 @@ class Performance(models.Model):
     score = models.FloatField(default=None, null=True)
     review_date = models.DateField(default=None, null=True)
     week_no = models.IntegerField(default=0, null=True)
-    update_by = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True, related_name='performance_update_by')
+    update_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performance_update_by')
 
     def __str__(self):
         return self.student.student.get_full_name()

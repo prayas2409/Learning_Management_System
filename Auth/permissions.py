@@ -22,12 +22,11 @@ class isMentorOrAdmin(permissions.BasePermission):
     message = {'response': 'You are not an Admin or a Mentor. Access Denied!'}
 
     def has_permission(self, request, view):
-        return request.user.role == Role.MENTOR.value or request.user.role == Role.STUDENT.value
+        return request.user.role == Role.MENTOR.value or request.user.role == Role.ADMIN.value
 
 
 class OnlyStudent(permissions.BasePermission):
     message = {'response': 'Only student can access'}
 
     def has_permission(self, request, view):
-        print(Role.STUDENT)
         return request.user.role == Role.STUDENT.value

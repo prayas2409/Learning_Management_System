@@ -44,7 +44,7 @@ class Student(models.Model):
 
 
 class Education(models.Model):
-    student = models.OneToOneField(Student, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
     institute = models.CharField(max_length=50, default=None, null=True, blank=True)
     degree = models.CharField(max_length=50, default=None, null=True, blank=True)
     stream = models.CharField(max_length=50, default=None, null=True, blank=True)

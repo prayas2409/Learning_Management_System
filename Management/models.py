@@ -75,6 +75,3 @@ class Performance(models.Model):
 
     def __str__(self):
         return self.student.student.get_full_name()
-
-    def get_average_score(self):
-        self.score

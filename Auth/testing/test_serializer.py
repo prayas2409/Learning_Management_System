@@ -1,6 +1,6 @@
 from django.test import TestCase
 from ..models import User
-from ..serializers import UserSerializer
+from ..serializers import UserSerializer, UserLoginSerializer
 
 
 class AuthenticationTest(TestCase):
@@ -44,11 +44,23 @@ class AuthenticationTest(TestCase):
 
         self.invalid_role = ["Doctor", 'admin', 'engineer', 'Teacher', 'mentor', 'xyz']
 
+        self.user_login_test_data = {
+            'username': 'birajit123',
+            'password': '123456'
+        }
+        self.invalid_login_credential_format = [
+            ('birajit', 'bira1'),  # not satisfying minimum password length
+            ('kl', '1123332'),  # not satisfying minimum username length
+            ('birajitnathdemohahahaha', '1123332'),  # not satisfying maximum username length
+            ('birajit', '11233324444sshhssssssssssss')  # not satisfying maximum password length
+        ]
+
         # saving in db
         self.user = User.objects.create(**self.user_data)
         self.user_serializer = UserSerializer(instance=self.user)
+        self.user_login_serializer = UserLoginSerializer(instance=self.user_login_test_data)
 
-# Test for UserSerializer
+    # Test for UserSerializer
 
     def test_user_serializer_contains_expected_fields(self):
         self.data = self.user_serializer.data
@@ -66,62 +78,80 @@ class AuthenticationTest(TestCase):
     def test_user_serializer_when_given_empty_fields_content_should_raise_validation_error(self):
         self.serializer = UserSerializer(data=self.user_null_data)
         self.assertFalse(self.serializer.is_valid())
-        self.assertEquals(set(self.serializer.errors), {'username', 'first_name', 'last_name', 'email', 'mobile', 'role'})
+        self.assertEquals(set(self.serializer.errors),
+                          {'username', 'first_name', 'last_name', 'email', 'mobile', 'role'})
 
-    def test_when_given_duplicate_username_should_raise_error(self):
+    def test_user_serializer_when_given_duplicate_username_should_raise_error(self):
         self.user_data['username'] = "birajit123"
         self.serializer = UserSerializer(data=self.user_data)
         self.assertFalse(self.serializer.is_valid())
         self.assertEquals(set(self.serializer.errors), {'username'})
 
-    def test_when_given_invalid_first_name_should_return_error(self):
+    def test_user_serializer_when_given_invalid_first_name_should_return_error(self):
         self.user_test_data['first_name'] = 'birajit nath'
         self.serializer = UserSerializer(data=self.user_test_data)
         self.assertFalse(self.serializer.is_valid())
         self.assertEquals(set(self.serializer.errors), {'first_name'})
 
-    def test_when_given_invalid_last_name_should_return_error(self):
+    def test_user_serializer_when_given_invalid_last_name_should_return_error(self):
         self.user_test_data['last_name'] = 'Nath Nath'
         self.serializer = UserSerializer(data=self.user_test_data)
         self.assertFalse(self.serializer.is_valid())
         self.assertEquals(set(self.serializer.errors), {'last_name'})
 
-    def test_when_given_duplicate_email_should_raise_error(self):
+    def test_user_serializer_when_given_duplicate_email_should_raise_error(self):
         self.user_data['username'] = "birajit@"
         self.user_data['email'] = 'birajit@gmail.com'
         self.serializer = UserSerializer(data=self.user_data)
         self.assertFalse(self.serializer.is_valid())
         self.assertEquals(set(self.serializer.errors), {'non_field_errors'})
 
-    def test_when_given_invalid_email_should_raise_error(self):
+    def test_user_serializer_when_given_invalid_email_should_raise_error(self):
         self.user_test_data['email'] = 'birajigmail.com'
         self.serializer = UserSerializer(data=self.user_test_data)
         self.assertFalse(self.serializer.is_valid())
         self.assertEquals(set(self.serializer.errors), {'email'})
 
-    def test_when_given_valid_mobile_no_should_return_true(self):
+    def test_user_serializer_when_given_valid_mobile_no_should_return_true(self):
         for valid_mobile_no in self.valid_mobile_no:
             self.user_test_data['mobile'] = valid_mobile_no
             self.serializer = UserSerializer(data=self.user_test_data)
             self.assertTrue(self.serializer.is_valid())
 
-    def test_when_given_invalid_mobile_no_should_raise_error(self):
+    def test_user_serializer_when_given_invalid_mobile_no_should_raise_error(self):
         for invalid_mobile_no in self.invalid_mobile_no:
             self.user_test_data['mobile'] = invalid_mobile_no
             self.serializer = UserSerializer(data=self.user_test_data)
             self.assertFalse(self.serializer.is_valid())
             self.assertEquals(set(self.serializer.errors), {'mobile'})
 
-    def test_when_given_valid_role_should_return_true(self):
+    def test_user_serializer_when_given_valid_role_should_return_true(self):
         for valid_role in self.valid_role:
             self.user_test_data['role'] = valid_role
             self.serializer = UserSerializer(data=self.user_test_data)
             self.assertTrue(self.serializer.is_valid())
 
-    def test_when_given_invalid_role_should_return_true(self):
+    def test_user_serializer_when_given_invalid_role_should_return_true(self):
         for invalid_role in self.invalid_role:
             self.user_test_data['role'] = invalid_role
             self.serializer = UserSerializer(data=self.user_test_data)
             self.assertFalse(self.serializer.is_valid())
             self.assertEquals(set(self.serializer.errors), {'role'})
 
+    # user login serializer tests
+
+    def test_login_serializer_contains_expected_fields(self):
+        data = self.user_login_serializer.data
+        self.assertCountEqual(set(data.keys()), {'username', 'password'})
+
+    def test_login_serializer_fields_content(self):
+        data = self.user_login_serializer.data
+        self.assertEqual(data['username'], self.user_login_test_data['username'])
+        self.assertEqual(data['password'], self.user_login_test_data['password'])
+
+    def test_user_login_serializer_when_given_invalid_login_credential_format_return_True(self):
+        for username, password in self.invalid_login_credential_format:
+            self.user_login_test_data['username'] = username
+            self.user_login_test_data['password'] = password
+            self.serializer = UserLoginSerializer(data=self.user_login_test_data)
+            self.assertFalse(self.serializer.is_valid())

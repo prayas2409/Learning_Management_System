@@ -81,6 +81,7 @@ class Performance(models.Model):
     review_date = models.DateField(default=None, null=True)
     week_no = models.IntegerField(default=0, null=True)
     update_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performance_update_by')
+    remark = models.CharField(max_length=350, default=True)
 
     def __str__(self):
         return self.student.student.get_full_name()

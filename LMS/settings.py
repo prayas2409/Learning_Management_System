@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'Auth.apps.AuthConfig',
     'Management.apps.ManagementConfig',
     'drf_yasg',
-    'rest_framework'
+    'rest_framework',
+    'django_celery_results',
 ]
 
 REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'}
@@ -139,3 +140,10 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = config('LMS_MAIL_USER')
 EMAIL_HOST_PASSWORD = config('LMS_MAIL_PASSWORD')
+
+
+
+# celery backend configuration
+
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'

@@ -28,8 +28,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=10, min_length=3, required=True)
+    """This Serializer is used to serializer user credential inputs
+    """
+    username = serializers.CharField(max_length=20, min_length=3, required=True)
     password = serializers.CharField(max_length=20, min_length=6, required=True)
+
 
 class ChangeUserPasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(max_length=15, min_length=6)

@@ -175,7 +175,7 @@ class PerformanceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Performance
-        fields = ['student_id', 'student',  'course_id', 'course', 'mentor_id', 'mentor', 'score', 'week_no',
+        fields = ['student_id', 'student',  'course_id', 'course', 'mentor_id', 'mentor', 'score', 'week_no', 'remark',
                   'review_date', 'update_by']
         read_only_fields = ('student', 'week_no', 'mentor', 'course', 'update_by')
 

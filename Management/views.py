@@ -232,6 +232,9 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
             serializer.is_valid(raise_exception=True)
             mentor = serializer.validated_data.get('mentor')
             course = serializer.validated_data.get('course')
+            if student.course_id == course.id:
+                return Response({'response': f"{course.course_name} is already assigned to {student.student.student.get_full_name()}."
+                                             f" Choose different one"}, status=status.HTTP_406_NOT_ACCEPTABLE)
             if mentor is None or course is None:
                 return Response({'response': "Mentor or Course can not be Null"}, status=status.HTTP_400_BAD_REQUEST)
             if course in mentor.course.all():

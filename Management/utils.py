@@ -13,3 +13,4 @@ class Pattern(enum.Enum):
 
     GIT_PATTERN = "^(https://github.com/)[a-zA-Z0-9]{1,}(/)?"
     MOBILE_PATTERN = "^(\+91|91|0)?[6-9]{1}[0-9]{9}$"
+    NAME_PATTERN = "^[A-Z]{1}[a-zA-Z]{2,}$"

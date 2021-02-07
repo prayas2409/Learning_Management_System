@@ -19,7 +19,10 @@ def create_student_or_mentor(sender, instance, created, **kwargs):
 
 @receiver(signal=post_save, sender=StudentCourseMentor)
 def create_performace_record(sender, instance, created, **kwargs):
-    if created:
-        for week_no in range(1, instance.course.duration_weeks+1):
-            Performance.objects.create(student=instance.student, mentor=instance.mentor,
-                                       course=instance.course, week_no=week_no)
+    if not created:
+        old_records = Performance.objects.filter(student_id=instance.student.id, score=None)
+        for record in old_records:
+            record.delete()
+    for week_no in range(1, instance.course.duration_weeks+1):
+        Performance.objects.create(student=instance.student, mentor=instance.mentor,
+                                    course=instance.course, week_no=week_no)

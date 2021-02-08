@@ -408,14 +408,13 @@ class EducationDetailsAdd(GenericAPIView):
             serializer = self.serializer_class(data=request.data, context={'student': student.id})
             serializer.is_valid(raise_exception=True)
             degree = serializer.validated_data.get('degree')
-            try:
-                Education.objects.get(student_id=student.id, degree=degree)
-                log.info('data is already present in database')
-                return Response({'response': f"{degree} data is already saved"}, status=status.HTTP_208_ALREADY_REPORTED)
-            except Education.DoesNotExist:
-                serializer.save()
-                log.info('data is saved')
-                return Response({'response': f"{degree} data is saved"}, status=status.HTTP_201_CREATED)
+            Education.objects.get(student_id=student.id, degree=degree)
+            log.info('data is already present in database')
+            return Response({'response': f"{degree} data is already saved"}, status=status.HTTP_208_ALREADY_REPORTED)
+        except Education.DoesNotExist:
+            serializer.save()
+            log.info('data is saved')
+            return Response({'response': f"{degree} data is saved"}, status=status.HTTP_201_CREATED)
         except Student.DoesNotExist as e:
             log.error(e)
             return Response({'response': 'Student record not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -430,7 +429,7 @@ class EducationDetailsUpdate(GenericAPIView):
     permission_classes = [OnlyStudent]
     queryset = Education.objects.all()
 
-    def put(self, request, record_id):
+    def patch(self, request, record_id):
         """This API is used to update student educational details
          @param record_id : Education table's primary key
          @return: updates existing education record
@@ -438,7 +437,7 @@ class EducationDetailsUpdate(GenericAPIView):
         try:
             student = Student.objects.get(student_id=request.user.id)
             record = self.queryset.get(id=record_id, student_id=student.id)
-            serializer = self.serializer_class(instance=record, data=request.data)
+            serializer = self.serializer_class(instance=record, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             log.info(f"{record.degree} record is updated")
@@ -448,7 +447,6 @@ class EducationDetailsUpdate(GenericAPIView):
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             log.error(e)
-            print(e)
             return Response({'response': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

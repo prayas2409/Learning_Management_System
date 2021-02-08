@@ -141,7 +141,7 @@ class TestAuthApp(TestCase):
         self.client.post(reverse('login'), data=json.dumps({'username': 'test_user', 'password': '123456'}),
                          content_type='application/json')
         response = self.client.get(reverse('add-user'))
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_forgot_password_when_given_mail_is_present_in_DB_and_user_is_not_logged_in(self):
         user = User.objects.create_user(username='test_user', password='123456',

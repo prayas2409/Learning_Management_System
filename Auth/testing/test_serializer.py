@@ -1,6 +1,6 @@
 from django.test import TestCase
 from ..models import User
-from ..serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer
+from ..serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, ForgotPasswordSerializer
 
 
 class AuthenticationTest(TestCase):
@@ -59,12 +59,19 @@ class AuthenticationTest(TestCase):
             'new_password': 'birajit123',
             'confirm_password': 'birajit123'
         }
+        self.forgot_password_test_data = {
+            'email':'birajit@gmail.com'
+        }
+        self.valid_email_list = ['birajit@gmail.com','birajit95@gmail.com', 'aryan.1.kcp@lpu.co.in']
+        self.invalid_email_list = ['birajitgmial.com', 'birajit@gmail@.com', 'ak@gmail,com']
 
         # saving in db
         self.user = User.objects.create(**self.user_data)
         self.user_serializer = UserSerializer(instance=self.user)
         self.user_login_serializer = UserLoginSerializer(instance=self.user_login_test_data)
         self.change_password_serializer = ChangeUserPasswordSerializer(instance=self.change_password_test_data)
+        self.forgot_password_serializer = ForgotPasswordSerializer(instance=self.user)
+
 
     # Test for UserSerializer
 
@@ -194,4 +201,17 @@ class AuthenticationTest(TestCase):
         self.assertFalse(self.serializer.is_valid())
         self.assertEquals(set(self.serializer.errors), {'new_password', 'confirm_password'})
 
+    # Test cases for forgot password serializer
 
+    def test_forgot_password_serializer_when_given_invalid_mail_should_return_True(self):
+        for invalid_email in self.invalid_email_list:
+            self.forgot_password_test_data['email'] = invalid_email
+            self.serializer = ForgotPasswordSerializer(data=self.forgot_password_test_data)
+            self.assertFalse(self.serializer.is_valid())
+            self.assertEquals(set(self.serializer.errors), {'email'})
+
+    def test_forgot_password_serializer_when_given_valid_mail_should_return_True(self):
+        for valid_email in self.valid_email_list:
+            self.forgot_password_test_data['email'] = valid_email
+            self.serializer = ForgotPasswordSerializer(data=self.forgot_password_test_data)
+            self.assertTrue(self.serializer.is_valid())

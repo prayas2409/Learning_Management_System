@@ -1,6 +1,7 @@
 from django.test import TestCase
 from ..models import User
-from ..serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, ForgotPasswordSerializer
+from ..serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, ForgotPasswordSerializer, \
+    ResetPasswordSerializer
 
 
 class AuthenticationTest(TestCase):
@@ -60,10 +61,15 @@ class AuthenticationTest(TestCase):
             'confirm_password': 'birajit123'
         }
         self.forgot_password_test_data = {
-            'email':'birajit@gmail.com'
+            'email': 'birajit@gmail.com'
         }
-        self.valid_email_list = ['birajit@gmail.com','birajit95@gmail.com', 'aryan.1.kcp@lpu.co.in']
+        self.valid_email_list = ['birajit@gmail.com', 'birajit95@gmail.com', 'aryan.1.kcp@lpu.co.in']
         self.invalid_email_list = ['birajitgmial.com', 'birajit@gmail@.com', 'ak@gmail,com']
+
+        self.reset_password_test_data = {
+            'new_password': '123456',
+            'confirm_password': '123456'
+        }
 
         # saving in db
         self.user = User.objects.create(**self.user_data)
@@ -71,7 +77,7 @@ class AuthenticationTest(TestCase):
         self.user_login_serializer = UserLoginSerializer(instance=self.user_login_test_data)
         self.change_password_serializer = ChangeUserPasswordSerializer(instance=self.change_password_test_data)
         self.forgot_password_serializer = ForgotPasswordSerializer(instance=self.user)
-
+        self.reset_password_serializer = ResetPasswordSerializer(instance=self.reset_password_test_data)
 
     # Test for UserSerializer
 
@@ -215,3 +221,31 @@ class AuthenticationTest(TestCase):
             self.forgot_password_test_data['email'] = valid_email
             self.serializer = ForgotPasswordSerializer(data=self.forgot_password_test_data)
             self.assertTrue(self.serializer.is_valid())
+
+    # Test cases for reset password serializer
+
+    def test_reset_password_serializer_when_given_matching_new_and_confirm_password_should_return_True(self):
+        self.serializer = ResetPasswordSerializer(data=self.reset_password_test_data)
+        self.assertTrue(self.serializer.is_valid())
+
+    def test_reset_password_serializer_when_given_miss_matching_new_and_confirm_password_should_return_False(self):
+        self.reset_password_test_data['new_password'] = '123456'
+        self.reset_password_test_data['confirm_password'] = 'abcdef'
+        self.serializer = ResetPasswordSerializer(data=self.reset_password_test_data)
+        self.assertFalse(self.serializer.is_valid())
+
+    def test_reset_password_serializer_when_given_new_password_and_confirm_password_length_above_20_chars_should_raise_error(self):
+        self.reset_password_test_data['new_password'] = '12345shshshhsqhqsqs55qs5s5q5s5s5'
+        self.reset_password_test_data['confirm_password'] = '12345shshshhsqhqsqs55qs5s5q5s5s5'
+        self.serializer = ResetPasswordSerializer(data=self.reset_password_test_data)
+        self.assertFalse(self.serializer.is_valid())
+        self.assertEquals(set(self.serializer.errors), {'new_password', 'confirm_password'})
+
+    def test_reset_password_serializer_when_given_new_password_and_confirm_password_length_bellow_6_chars_should_raise_error(self):
+        self.reset_password_test_data['new_password'] = '12345'
+        self.reset_password_test_data['confirm_password'] = '12345'
+        self.serializer = ResetPasswordSerializer(data=self.reset_password_test_data)
+        self.assertFalse(self.serializer.is_valid())
+        self.assertEquals(set(self.serializer.errors), {'new_password', 'confirm_password'})
+
+

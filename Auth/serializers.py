@@ -50,6 +50,9 @@ class ChangeUserPasswordSerializer(serializers.Serializer):
 
 
 class ForgotPasswordSerializer(serializers.ModelSerializer):
+    """This serializer is used to serialize forgot password input as well as new login link with token api's input.
+       Input Field: email field
+    """
     class Meta:
         model = User
         fields = ['email']

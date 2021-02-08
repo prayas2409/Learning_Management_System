@@ -35,11 +35,15 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class ChangeUserPasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(max_length=15, min_length=6)
-    new_password = serializers.CharField(max_length=15, min_length=6)
-    confirm_password = serializers.CharField(max_length=15, min_length=6)
+    """This serializer is used to serialize change password credential inputs"""
+
+    old_password = serializers.CharField(max_length=20, min_length=6)
+    new_password = serializers.CharField(max_length=20, min_length=6)
+    confirm_password = serializers.CharField(max_length=20, min_length=6)
 
     def validate(self, data):
+        """If new password and confirm password are not matching then raising an exception"""
+
         if data.get('new_password') != data.get('confirm_password'):
             raise serializers.ValidationError("Password does not Match!")
         return data

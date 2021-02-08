@@ -59,8 +59,11 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
 
 
 class ResetPasswordSerializer(serializers.Serializer):
-    new_password = serializers.CharField(min_length=6, max_length=16, required=True)
-    confirm_password = serializers.CharField(min_length=6, max_length=16, required=True)
+    """This serializer is used to serialize reset password API's inputs as well as Change Password on First Access API's
+    inputs.
+    """
+    new_password = serializers.CharField(min_length=6, max_length=20, required=True)
+    confirm_password = serializers.CharField(min_length=6, max_length=20, required=True)
 
     def validate(self, data):
         if data.get('new_password') != data.get('confirm_password'):

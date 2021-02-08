@@ -1,6 +1,6 @@
 from django.test import TestCase
 from ..models import User
-from ..serializers import UserSerializer, UserLoginSerializer
+from ..serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer
 
 
 class AuthenticationTest(TestCase):
@@ -54,11 +54,17 @@ class AuthenticationTest(TestCase):
             ('birajitnathdemohahahaha', '1123332'),  # not satisfying maximum username length
             ('birajit', '11233324444sshhssssssssssss')  # not satisfying maximum password length
         ]
+        self.change_password_test_data = {
+            'old_password': '123456',
+            'new_password': 'birajit123',
+            'confirm_password': 'birajit123'
+        }
 
         # saving in db
         self.user = User.objects.create(**self.user_data)
         self.user_serializer = UserSerializer(instance=self.user)
         self.user_login_serializer = UserLoginSerializer(instance=self.user_login_test_data)
+        self.change_password_serializer = ChangeUserPasswordSerializer(instance=self.change_password_test_data)
 
     # Test for UserSerializer
 
@@ -155,3 +161,37 @@ class AuthenticationTest(TestCase):
             self.user_login_test_data['password'] = password
             self.serializer = UserLoginSerializer(data=self.user_login_test_data)
             self.assertFalse(self.serializer.is_valid())
+
+    # Test cases for Chnage password serializer
+
+    def test_change_password_serializer_contains_expected_fields(self):
+        data = self.change_password_serializer.data
+        self.assertCountEqual(set(data.keys()), {'old_password', 'new_password', 'confirm_password'})
+
+    def test_change_password_serializer_fields_content(self):
+        data = self.change_password_serializer.data
+        self.assertEqual(data['old_password'], self.change_password_test_data['old_password'])
+        self.assertEqual(data['new_password'], self.change_password_test_data['new_password'])
+        self.assertEqual(data['confirm_password'], self.change_password_test_data['confirm_password'])
+
+    def test_when_given_miss_matched_new_and_confirm_passwords_should_raise_error(self):
+        self.change_password_test_data['new_password'] = '123456'
+        self.change_password_test_data['confirm_password'] = 'birajit12'
+        self.serializer = ChangeUserPasswordSerializer(data=self.change_password_test_data)
+        self.assertFalse(self.serializer.is_valid())
+
+    def test_when_given_new_password_and_confirm_password_length_bellow_6_chars_should_raise_error(self):
+        self.change_password_test_data['new_password'] = '12345'
+        self.change_password_test_data['confirm_password'] = '12345'
+        self.serializer = ChangeUserPasswordSerializer(data=self.change_password_test_data)
+        self.assertFalse(self.serializer.is_valid())
+        self.assertEquals(set(self.serializer.errors), {'new_password', 'confirm_password'})
+
+    def test_when_given_new_password_and_confirm_password_length_above_20_chars_should_raise_error(self):
+        self.change_password_test_data['new_password'] = '12345shshshhsqhqsqs55qs5s5q5s5s5'
+        self.change_password_test_data['confirm_password'] = '12345shshshhsqhqsqs55qs5s5q5s5s5'
+        self.serializer = ChangeUserPasswordSerializer(data=self.change_password_test_data)
+        self.assertFalse(self.serializer.is_valid())
+        self.assertEquals(set(self.serializer.errors), {'new_password', 'confirm_password'})
+
+

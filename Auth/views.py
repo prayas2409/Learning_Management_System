@@ -13,6 +13,7 @@ from django.contrib.auth.hashers import check_password
 from .models import User, TokenBlackList
 import random
 from django.urls import reverse
+from .tasks import send_registration_mail, send_password_reset_mail
 import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
@@ -56,7 +57,7 @@ class UserRegistrationView(GenericAPIView):
             'site': get_current_site(request).domain,
             'token': JWTAuth.getToken(username=user.username, password=user.password)
         }
-        Email.sendEmail(Email.configureAddUserEmail(data))
+        send_registration_mail.delay(data)
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
         return Response({'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
                          'token': data['token']}, status=status.HTTP_201_CREATED)
@@ -66,7 +67,7 @@ class UserRegistrationView(GenericAPIView):
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
 
-    def get(self, request):
+    def get(self, request, token=None):
         """This API is used to inform the client that its a genuine login request and it can serve the login interface
         @param request: login request
         @return: informs client about genuine request
@@ -83,7 +84,7 @@ class UserLoginView(GenericAPIView):
             log.info('Valid login page request')
             return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
 
-    def post(self, request):
+    def post(self, request, token=None):
         """This API is used to log user in
         @param request: basic credential
         @return: logs user in
@@ -150,7 +151,7 @@ class ChangeUserPasswordView(GenericAPIView):
 class ForgotPasswordView(GenericAPIView):
     serializer_class = ForgotPasswordSerializer
 
-    def post(self, request):
+    def post(self, request, token=None):
         """This API is used to send reset password link to user email id
         @param request: user email id
         @return: password reset link with jwt token
@@ -163,11 +164,12 @@ class ForgotPasswordView(GenericAPIView):
             log.info("email id not found")
             return Response({'response': 'Email not found'}, status=status.HTTP_404_NOT_FOUND)
         email_data = {
-            'user': user,
+            'name': user.get_full_name(),
+            'email': user.email,
             'site': get_current_site(request).domain,
             'token': JWTAuth.getToken(username=user.username, password=user.password)
         }
-        Email.sendEmail(Email.configurePasswordRestEmail(email_data))
+        send_password_reset_mail.delay(email_data)
         log.info('reset password link is sent to mail')
         return Response({'response': 'Password reset link is sent to your mail'}, status=status.HTTP_200_OK)
 

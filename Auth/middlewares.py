@@ -36,8 +36,8 @@ class CantAccessAfterLogin(object):
     def __init__(self, get_response):
         self.get_response = get_response
 
-    def __call__(self, request):
+    def __call__(self, request, token=None):
         if request.user.is_authenticated:
             return JsonResponse({'response': 'You need to logout to access this this resource'},
                                 status=status.HTTP_406_NOT_ACCEPTABLE)
-        return self.get_response(request)
+        return self.get_response(request, token)

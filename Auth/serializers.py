@@ -24,6 +24,8 @@ class UserSerializer(serializers.ModelSerializer):
         """
         if User.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError("This email is already registered! Try with different one")
+        if User.objects.filter(mobile=data['mobile']).exists():
+            raise serializers.ValidationError("This mobile number is already registered! Try with different one")
         return data
 
 

@@ -9,10 +9,14 @@ from Auth.models import User
 
 
 class CourseSerializer(serializers.ModelSerializer):
+    """This serializer is used to serialize course input"""
+
+    duration_weeks = serializers.IntegerField(required=True)
+
     class Meta:
         model = Course
         fields = ['id', 'course_name', 'duration_weeks']
-        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}}
+        extra_kwargs = {'id': {'read_only': True}}
 
     def validate(self, data):
         data['course_name'] = data['course_name'].upper()

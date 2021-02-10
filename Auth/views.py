@@ -8,7 +8,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
-from .middlewares import SessionAuthentication, SessionAuthenticationOnFirstAccess, CantAccessAfterLogin
+from .middlewares import TokenAuthentication, TokenAuthenticationOnFirstAccess, CantAccessAfterLogin
 from django.contrib.auth.hashers import check_password
 from .models import User, TokenBlackList
 import random
@@ -20,7 +20,7 @@ from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class UserRegistrationView(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = (isAdmin,)
@@ -72,7 +72,7 @@ class UserLoginView(GenericAPIView):
         @param request: login request
         @return: informs client about genuine request
         """
-        if not request.user.is_authenticated:
+        if not request.META.get('user'):
             token = request.GET.get('token')
             try:
                 blacklist_token = TokenBlackList.objects.get(token=token)
@@ -95,38 +95,37 @@ class UserLoginView(GenericAPIView):
         password = serializer.data.get('password')
         user = authenticate(request, username=username, password=password)
         if user:
-            if user.is_first_time_login:
+            if user.is_first_time_login and user.is_superuser == False:
                 token = request.GET.get('token')
                 if JWTAuth.verifyToken(token):
-                    login(request, user)
                     log.info('login successful but need to change password')
                     return Response({'response': 'You are logged in! Now you need to change password to access resources',
-                                     'link': reverse('change-password-on-first-access',
-                                                                                 args=[token])}, status=status.HTTP_200_OK)
+                                    'link': reverse('change-password-on-first-access',
+                                                                                args=[token])}, status=status.HTTP_200_OK)
                 log.info('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
-            login(request, user)
             log.info('successful login')
-            request.session[username] = JWTAuth.getToken(username=username, password=password)
-            return Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
+            response = Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
+            response['Authorization'] = JWTAuth.getToken(username=username, password=password)
+            return response
         log.info('bad credential found')
         return Response({'response': 'Bad credential found'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class UserLogoutView(GenericAPIView):
     def get(self, request):
         """This API is used to log user out and to clear the user session
         """
-        if request.session.get(request.user.username):
-            request.session.pop(request.user.username)
-        logout(request)
+        # if request.session.get(request.META['user'].username):
+        #     request.session.pop(request.META['user'].username)
+        # logout(request)
         log.info('logout successful')
         return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class ChangeUserPasswordView(GenericAPIView):
     serializer_class = ChangeUserPasswordSerializer
 
@@ -138,9 +137,9 @@ class ChangeUserPasswordView(GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         old_password = serializer.data.get('old_password')
-        if check_password(old_password, request.user.password):
-            request.user.set_password(raw_password=serializer.data.get('new_password'))
-            request.user.save()
+        if check_password(old_password, request.META['user'].password):
+            request.META['user'].set_password(raw_password=serializer.data.get('new_password'))
+            request.META['user'].save()
             log.info('password changed successfully')
             return Response({'response': 'Your password is changed successfully!'}, status=status.HTTP_200_OK)
         log.info('Old password does not match')
@@ -230,7 +229,7 @@ class ResetPasswordView(GenericAPIView):
             return Response({'response': 'User not found!'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthenticationOnFirstAccess, name='dispatch')
+@method_decorator(TokenAuthenticationOnFirstAccess, name='dispatch')
 class ChangePasswordOnFirstAccess(GenericAPIView):
     serializer_class = ResetPasswordSerializer
 
@@ -268,9 +267,9 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         if JWTAuth.verifyToken(token):
-            request.user.set_password(raw_password=serializer.data.get('new_password'))
-            request.user.is_first_time_login = False
-            request.user.save()
+            request.META['user'].set_password(raw_password=serializer.data.get('new_password'))
+            request.META['user'].is_first_time_login = False
+            request.META['user'].save()
             TokenBlackList.objects.create(token=token)
             log.info('password is changed successfully')
             return Response({'response': 'Your password is changed successfully! Now You can access resources'},

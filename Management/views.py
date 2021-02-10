@@ -8,16 +8,16 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer
-
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer
+import pandas
 import sys
 sys.path.append('..')
 from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent, Role
-from Auth.middlewares import SessionAuthentication
+from Auth.middlewares import TokenAuthentication
 from LMS.loggerConfig import log
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class AddCourseAPIView(GenericAPIView):
     serializer_class = CourseSerializer
     permission_classes = [isAdmin]
@@ -40,7 +40,7 @@ class AddCourseAPIView(GenericAPIView):
                         status=status.HTTP_201_CREATED)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class AllCoursesAPIView(GenericAPIView):
     serializer_class = CourseSerializer
     permission_classes = [isAdmin]
@@ -55,7 +55,7 @@ class AllCoursesAPIView(GenericAPIView):
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class UpdateCourseAPIView(GenericAPIView):
     permission_classes = [isAdmin]
     serializer_class = CourseSerializer
@@ -76,7 +76,7 @@ class UpdateCourseAPIView(GenericAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class DeleteCourseAPIView(GenericAPIView):
     serializer_class = CourseSerializer
     permission_classes = [isAdmin]
@@ -94,7 +94,7 @@ class DeleteCourseAPIView(GenericAPIView):
             return Response({'response': 'Course not found with this id'})
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class CourseToMentorMapAPIView(GenericAPIView):
     permission_classes = [isAdmin]
     serializer_class = CourseMentorSerializer
@@ -118,7 +118,7 @@ class CourseToMentorMapAPIView(GenericAPIView):
         return Response({'response': f" New course added to {mentor}'s course list"})
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class DeleteCourseFromMentorListAPIView(GenericAPIView):
     permission_classes = [isAdmin]
 
@@ -143,7 +143,7 @@ class DeleteCourseFromMentorListAPIView(GenericAPIView):
             return Response({'response': f'Course with this id {course_id} is not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class AllMentorDetailsAPIView(GenericAPIView):
     serializer_class = MentorSerializer
     permission_classes = [isAdmin]
@@ -158,7 +158,7 @@ class AllMentorDetailsAPIView(GenericAPIView):
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class MentorDetailsAPIView(GenericAPIView):
     serializer_class = MentorSerializer
     permission_classes = [isAdmin]
@@ -176,7 +176,7 @@ class MentorDetailsAPIView(GenericAPIView):
             return Response({'response': 'something wrong happend'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentCourseMentorMapAPIView(GenericAPIView):
     serializer_class = StudentCourseMentorSerializer
     permission_classes = [isAdmin]
@@ -195,7 +195,7 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
     def post(self, request):
         """This API is used to post student course mentor mapped record
         """
-        serializer = self.serializer_class(data=request.data, context={'user': request.user})
+        serializer = self.serializer_class(data=request.data, context={'user': request.META['user']})
         serializer.is_valid(raise_exception=True)
         mentor = serializer.validated_data.get('mentor')
         course = serializer.validated_data.get('course')
@@ -214,7 +214,7 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
                         , status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentCourseMentorUpdateAPIView(GenericAPIView):
     serializer_class = StudentCourseMentorUpdateSerializer
     permission_classes = [isAdmin]
@@ -228,7 +228,7 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
         """
         try:
             student = self.queryset.get(student_id=student_id)
-            serializer = StudentCourseMentorUpdateSerializer(instance=student, data=request.data, context={'user': request.user})
+            serializer = StudentCourseMentorUpdateSerializer(instance=student, data=request.data, context={'user': request.META['user']})
             serializer.is_valid(raise_exception=True)
             mentor = serializer.validated_data.get('mentor')
             course = serializer.validated_data.get('course')
@@ -248,7 +248,7 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
             return Response({'response': f'record with id {student_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class GetMentorsForSpecificCourse(GenericAPIView):
     serializer_class = MentorSerializer
     permission_classes = [isAdmin]
@@ -269,7 +269,7 @@ class GetMentorsForSpecificCourse(GenericAPIView):
             return Response({'response': f'course with id {course_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentsAPIView(GenericAPIView):
     serializer_class = StudentSerializer
     permission_classes = [AllowAny,]
@@ -279,25 +279,25 @@ class StudentsAPIView(GenericAPIView):
         """Using this API Admin can see all course assigned students and mentor can see his course assigned students
          and student can see his own record
         """
-        if request.user.role == Role.MENTOR.value:
-            query = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor_id=request.user))
-        elif request.user.role == Role.STUDENT.value:
-            student = Student.objects.get(student_id=request.user)
+        if request.META['user'].role == Role.MENTOR.value:
+            query = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor_id=request.META['user']))
+        elif request.META['user'].role == Role.STUDENT.value:
+            student = Student.objects.get(student_id=request.META['user'])
             query = StudentCourseMentor.objects.filter(student=student)
         else:
             query = self.queryset.all()
         if not query:
-            if request.user.role == Role.STUDENT.value:
+            if request.META['user'].role == Role.STUDENT.value:
                 student_serializer = StudentBasicSerializer(student)
                 return Response({'response': student_serializer.data}, status=status.HTTP_200_OK)
             log.info("Records not found")
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
         serializerDict = self.serializer_class(query, many=True).data
-        log.info(f"records retrieved by {request.user.role}")
+        log.info(f"records retrieved by {request.META['user'].role}")
         return Response({'response': serializerDict}, status=status.HTTP_200_OK)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentDetailsAPIView(GenericAPIView):
     serializer_class = StudentDetailsSerializer
     permission_classes = [AllowAny]
@@ -308,10 +308,10 @@ class StudentDetailsAPIView(GenericAPIView):
         those student under him and student can see his own details
         """
         try:
-            if request.user.role == Role.STUDENT.value:
-                student = Student.objects.get(student_id=request.user)
-            elif request.user.role == Role.MENTOR.value:
-                student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.user),
+            if request.META['user'].role == Role.STUDENT.value:
+                student = Student.objects.get(student_id=request.META['user'])
+            elif request.META['user'].role == Role.MENTOR.value:
+                student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.META['user']),
                                                           student_id=student_id).student
             else:
                 student = self.queryset.get(id=student_id)
@@ -324,14 +324,14 @@ class StudentDetailsAPIView(GenericAPIView):
                 serializer.update(studentCourseSerializer)
             except StudentCourseMentor.DoesNotExist:
                 pass
-            log.info(f"Data accessed by {request.user.role}")
+            log.info(f"Data accessed by {request.META['user'].role}")
             return Response({'response': serializer}, status=status.HTTP_200_OK)
         except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
             log.info('Record not found')
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentsDetailsUpdateAPIView(GenericAPIView):
     serializer_class = StudentDetailsSerializer
     permission_classes = [OnlyStudent]
@@ -350,7 +350,7 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
         """This API is used to update student basic details
         """
         try:
-            student = Student.objects.get(student_id=request.user)
+            student = Student.objects.get(student_id=request.META['user'])
             serializer = self.serializer_class(instance=student, data=request.data)
             serializer.is_valid(raise_exception=True)
         except Student.DoesNotExist:
@@ -360,11 +360,11 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
         except Exception:
             log.info('Some error occurred')
             return Response({'response': "Some error occurred "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        log.info(f'Record updated by {request.user.role}')
+        log.info('Record updated by ' + request.META['user'].role)
         return Response({'response': 'Records updated'}, status=status.HTTP_200_OK)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class EducationDetails(GenericAPIView):
     serializer_class = EducationSerializer
     permission_classes = [AllowAny]
@@ -375,11 +375,11 @@ class EducationDetails(GenericAPIView):
         student can see his own details
         """
         try:
-            if request.user.role == Role.STUDENT.value:
-                student = Student.objects.get(student_id=request.user.id)
+            if request.META['user'].role == Role.STUDENT.value:
+                student = Student.objects.get(student_id=request.META['user'].id)
                 query = self.queryset.filter(student_id=student.id)
-            elif request.user.role == Role.MENTOR.value:
-                mentor = Mentor.objects.get(mentor_id=request.user.id)
+            elif request.META['user'].role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor_id=request.META['user'].id)
                 query = self.queryset.filter(mentor_id=mentor, student_id=student_id)
             else:
                 query = self.queryset.filter(student_id=student_id)
@@ -394,7 +394,7 @@ class EducationDetails(GenericAPIView):
             return Response({'response': "Records not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class EducationDetailsAdd(GenericAPIView):
     serializer_class = EducationSerializer
     permission_classes = [OnlyStudent]
@@ -404,7 +404,7 @@ class EducationDetailsAdd(GenericAPIView):
         """This API is used to add Education details of student. This API is accessible to student only
         """
         try:
-            student = Student.objects.get(student_id=request.user.id)
+            student = Student.objects.get(student_id=request.META['user'].id)
             serializer = self.serializer_class(data=request.data, context={'student': student.id})
             serializer.is_valid(raise_exception=True)
             degree = serializer.validated_data.get('degree')
@@ -423,7 +423,7 @@ class EducationDetailsAdd(GenericAPIView):
             return Response({'response': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class EducationDetailsUpdate(GenericAPIView):
     serializer_class = EducationUpdateSerializer
     permission_classes = [OnlyStudent]
@@ -435,7 +435,7 @@ class EducationDetailsUpdate(GenericAPIView):
          @return: updates existing education record
         """
         try:
-            student = Student.objects.get(student_id=request.user.id)
+            student = Student.objects.get(student_id=request.META['user'].id)
             record = self.queryset.get(id=record_id, student_id=student.id)
             serializer = self.serializer_class(instance=record, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
@@ -450,7 +450,7 @@ class EducationDetailsUpdate(GenericAPIView):
             return Response({'response': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class NewStudents(GenericAPIView):
     serializer_class = NewStudentsSerializer
     permission_classes = [isAdmin]
@@ -465,11 +465,11 @@ class NewStudents(GenericAPIView):
         if not serializer.data:
             log.info('No records found')
             return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info(f'Records Retrieved by {request.user.role}')
+        log.info('Records Retrieved by ' + request.META['user'].role)
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentPerformance(GenericAPIView):
     serializer_class = PerformanceSerializer
     permission_classes = [AllowAny]
@@ -483,11 +483,11 @@ class StudentPerformance(GenericAPIView):
         @return: performace records of specific student
         """
         try:
-            if request.user.role == Role.STUDENT.value:
-                student = Student.objects.get(student_id=request.user.id)
+            if request.META['user'].role == Role.STUDENT.value:
+                student = Student.objects.get(student_id=request.META['user'].id)
                 query = self.queryset.filter(student_id=student.id)
-            elif request.user.role == Role.MENTOR.value:
-                mentor = Mentor.objects.get(mentor_id=request.user.id)
+            elif request.META['user'].role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor_id=request.META['user'].id)
                 query = self.queryset.filter(mentor_id=mentor.id, student_id=student_id)
             else:
                 query = self.queryset.filter(student_id=student_id)
@@ -498,11 +498,11 @@ class StudentPerformance(GenericAPIView):
         if not serializer.data:
             log.info('Records not found')
             return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info(f'Records retrieved by {request.user.role}')
+        log.info('Records retrieved by ' + {request.META['user'].role})
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
-@method_decorator(SessionAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class StudentPerfromanceUpdate(GenericAPIView):
     serializer_class = PerformanceSerializer
     permission_classes = [isMentorOrAdmin]
@@ -516,13 +516,13 @@ class StudentPerfromanceUpdate(GenericAPIView):
         @return: updates score
         """
         try:
-            if request.user.role == Role.MENTOR.value:
-                mentor = Mentor.objects.get(mentor_id=request.user.id)
+            if request.META['user'].role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor_id=request.META['user'].id)
                 student = self.queryset.get(mentor_id=mentor.id, student_id=student_id, week_no=week_no)
             else:
                 student = self.queryset.get(student_id=student_id, week_no=week_no)
 
-            serializer = self.serializer_class(instance=student, data=request.data, context={'user': request.user})
+            serializer = self.serializer_class(instance=student, data=request.data, context={'user': request.META['user']})
             serializer.is_valid(raise_exception=True)
             if week_no > 1:
                 previous_record = self.queryset.get(student_id=student_id, week_no=week_no-1).score
@@ -537,3 +537,24 @@ class StudentPerfromanceUpdate(GenericAPIView):
                         status=status.HTTP_200_OK)
 
 
+
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class UpdateScoreFromExcel(GenericAPIView):
+    serializer_class = ExcelDataSerializer
+    permission_classes = [isAdmin]
+
+    def post(self, request):
+        try:
+            file = request.FILES.get('file')
+            serializer = self.serializer_class(data={'file': file})
+            serializer.is_valid(raise_exception=True)
+            file = serializer.validated_data['file']
+            df = pandas.read_excel(file)
+            print(set(df.columns))
+            print(df)
+            return Response('res')
+        except Exception as e:
+            return Response({'response':str(e) }, status=status.HTTP_400_BAD_REQUEST)
+
+    

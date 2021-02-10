@@ -7,9 +7,9 @@ class User(AbstractUser):
     """This is the base user model which is build extending the AbstractUser models functionalities.
     All the bassic fields like username, first_name, last_name, email, password etc are extended in this model"""
 
-    mobile = models.CharField(max_length=13, unique=True)
+    mobile = models.CharField(max_length=13)
     role = models.CharField(choices=(('Mentor', 'Mentor'), ('Engineer', 'Engineer'), ('Admin', 'Admin')),
-                            max_length=10)
+                            max_length=10, default="Admin")
     is_first_time_login = models.BooleanField(default=True)
 
     def __str__(self):

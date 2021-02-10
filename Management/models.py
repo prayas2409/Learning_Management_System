@@ -13,8 +13,25 @@ def get_course_id():
         int_part = int(int_part)
         int_part += 1
         return str_part + '-' + str(int_part)
-    return "CI-1000"
+    return "CI-0000"
+    
+def get_student_id():
+    last_record = Student.objects.all().last()
+    if last_record:
+        str_part, int_part = last_record.sid.split('-')
+        int_part = int(int_part)
+        int_part += 1
+        return str_part + '-' + str(int_part)
+    return "SID-0000"
 
+def get_mentor_id():
+    last_record = Mentor.objects.all().last()
+    if last_record:
+        str_part, int_part = last_record.mid.split('-')
+        int_part = int(int_part)
+        int_part += 1
+        return str_part + '-' + str(int_part)
+    return "MID-0000"
 
 class Course(models.Model):
     """
@@ -32,6 +49,8 @@ class Course(models.Model):
 
 class Mentor(models.Model):
     mentor = models.OneToOneField(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='mentor',max_length=255, null=True, blank=True)
+    mid = models.CharField(max_length=10, unique=True, default=get_mentor_id)
     course = models.ManyToManyField(to=Course, related_name='course_mentor')
 
     def __str__(self):
@@ -48,6 +67,8 @@ class Student(models.Model):
         (5, 5),
     )
     student = models.OneToOneField(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='student',max_length=255, null=True, blank=True)
+    sid = models.CharField(max_length=10, unique=True, default=get_student_id)
     alt_number = models.CharField(max_length=13, default=None, null=True, blank=True)
     relation_with_alt_number_holder = models.CharField(max_length=20, default=None, null=True, blank=True)
     current_location = models.CharField(max_length=50, default=None, null=True, blank=True)

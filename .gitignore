@@ -2,3 +2,6 @@ __pycache__
 db.sqlite3
 .env
 migrations
+.idea
+Logs
+env

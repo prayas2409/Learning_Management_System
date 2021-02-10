@@ -182,3 +182,11 @@ class PerformanceSerializer(serializers.ModelSerializer):
     def validate(self, data):
         data['update_by'] = self.context['user']
         return data
+
+class ExcelDataSerializer(serializers.Serializer):
+    file = serializers.FileField(required=True)
+    
+    def validate(self, data):
+        if data['file']._name.split('.')[1] not in ['xlsx']:
+            raise serializers.ValidationError('response: Invalid file format. [.xlsx] expected')
+        return data

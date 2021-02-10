@@ -10,7 +10,7 @@ class TokenAuthentication(object):
         self.get_response = get_response
 
     def __call__(self, request, *args, **kwargs):
-        jwtData = JWTAuth.verifyToken(request.headers.get('Authorization'))      
+        jwtData = JWTAuth.verifyToken(request.headers.get('Authorization'))
         if request.resolver_match.url_name == 'logout':
             return self.get_response(request, *args, **kwargs)
         if jwtData:

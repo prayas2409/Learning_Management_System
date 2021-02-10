@@ -6,9 +6,25 @@ sys.path.append('..')
 from Auth.models import User
 
 
+def get_course_id():
+    last_record = Course.objects.all().last()
+    if last_record:
+        str_part, int_part = last_record.cid.split('-')
+        int_part = int(int_part)
+        int_part += 1
+        return str_part + '-' + str(int_part)
+    return "CI-1000"
+
+
 class Course(models.Model):
-    course_name = models.CharField(max_length=30, unique=True)
+    """
+        This model is used to create course table with below fields
+    """
+    course_name = models.CharField(max_length=50, unique=True)
+    cid = models.CharField(max_length=10, unique=True, default=get_course_id)
+    course_price = models.IntegerField(default=0)
     duration_weeks = models.IntegerField(default=0, null=True)
+    description = models.CharField(max_length=150, default=None, null=True, blank=True)
 
     def __str__(self):
         return self.course_name

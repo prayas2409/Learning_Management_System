@@ -11,8 +11,8 @@ from Auth.models import User
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ['id', 'course_name', 'duration_weeks']
-        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}}
+        fields = ['id', 'course_name', 'cid', 'duration_weeks', 'description', 'course_price']
+        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}, 'cid': {'read_only': True} }
 
     def validate(self, data):
         data['course_name'] = data['course_name'].upper()
@@ -98,7 +98,7 @@ class StudentBasicSerializer(serializers.ModelSerializer):
 
 class StudentDetailsSerializer(serializers.ModelSerializer):
     student = serializers.StringRelatedField(read_only=True)
-    alt_number = serializers.CharField(max_length=13,min_length=10,required=True)
+    alt_number = serializers.CharField(max_length=13, min_length=10, required=True)
     relation_with_alt_number_holder = serializers.CharField(read_only=True, max_length=10)
     current_location = serializers.CharField(min_length=3, max_length=30, required=True)
     current_address = serializers.CharField(min_length=5, required=True)
@@ -131,7 +131,7 @@ class EducationSerializer(serializers.ModelSerializer):
         fields = ['id', 'student_id', 'student', 'institute', 'degree', 'stream', 'percentage', 'from_date', 'till']
 
     def validate(self, data):
-        data['student_id'] = self.context['student']    # storing logged in student id and returning with data
+        data['student_id'] = self.context['student']  # storing logged in student id and returning with data
         return data
 
 
@@ -175,7 +175,7 @@ class PerformanceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Performance
-        fields = ['student_id', 'student',  'course_id', 'course', 'mentor_id', 'mentor', 'score', 'week_no', 'remark',
+        fields = ['student_id', 'student', 'course_id', 'course', 'mentor_id', 'mentor', 'score', 'week_no', 'remark',
                   'review_date', 'update_by']
         read_only_fields = ('student', 'week_no', 'mentor', 'course', 'update_by')
 
@@ -183,9 +183,10 @@ class PerformanceSerializer(serializers.ModelSerializer):
         data['update_by'] = self.context['user']
         return data
 
+
 class ExcelDataSerializer(serializers.Serializer):
     file = serializers.FileField(required=True)
-    
+
     def validate(self, data):
         if data['file']._name.split('.')[1] not in ['xlsx']:
             raise serializers.ValidationError('response: Invalid file format. [.xlsx] expected')

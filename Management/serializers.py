@@ -12,7 +12,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['id', 'course_name', 'cid', 'duration_weeks', 'description', 'course_price']
-        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}, 'cid': {'read_only': True} }
+        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}, 'cid': {'read_only': True}}
 
     def validate(self, data):
         data['course_name'] = data['course_name'].upper()
@@ -191,3 +191,16 @@ class ExcelDataSerializer(serializers.Serializer):
         if data['file']._name.split('.')[1] not in ['xlsx']:
             raise serializers.ValidationError('response: Invalid file format. [.xlsx] expected')
         return data
+
+
+class MentorStudentCourseSerializer(serializers.Serializer):
+    id = serializers.StringRelatedField(read_only=True)
+    mentor_id = serializers.StringRelatedField(read_only=True)
+    mentor = serializers.StringRelatedField(read_only=True)
+    mid = serializers.StringRelatedField(read_only=True)
+    student = serializers.StringRelatedField(read_only=True)
+    sid = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = StudentCourseMentor

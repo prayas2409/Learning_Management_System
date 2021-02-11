@@ -8,13 +8,17 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddStudentSerializer
 import pandas
 import sys
 sys.path.append('..')
 from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent, Role
 from Auth.middlewares import TokenAuthentication
 from LMS.loggerConfig import log
+import random
+from Auth.models import User
+from Management.utils import GeneratePassword, GetFirstNameAndLastName
+import datetime
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -557,4 +561,34 @@ class UpdateScoreFromExcel(GenericAPIView):
         except Exception as e:
             return Response({'response':str(e) }, status=status.HTTP_400_BAD_REQUEST)
 
-    
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class AddStudent(GenericAPIView):
+    serializer_class = AddStudentSerializer
+    permission_classes = [isAdmin]
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'user': request.META['user']})
+        serializer.is_valid(raise_exception=True)
+        name = serializer.validated_data['name']
+        email = serializer.validated_data['email']
+        mobile = serializer.validated_data['mobile']
+        first_name = GetFirstNameAndLastName.get_first_anme(name)
+        last_name = GetFirstNameAndLastName.get_last_name(name)
+        password = GeneratePassword.generate_password(self)
+        student = serializer.validated_data['student']
+        course = student['course']
+        mentor = student['mentor']
+        if mentor and course:
+            if course in mentor.course.all():
+                user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name,
+                                                email=email, mobile=mobile, role='Engineer', password=password)
+                StudentCourseMentor.objects.create(student=Student.objects.get(student=user), 
+                                                course=course, 
+                                                mentor=Mentor.objects.get(mentor=User.objects.get(mentor=mentor)))
+                log.info("Student is created succesfully")
+                return Response({'response':"Student is created succesfully"}, status=status.HTTP_201_CREATED)
+            log.error('This course is not assigned to the mentor.')
+            return Response({'response':f'{course.course_name} is not assigned to the mentor.'}, status=status.HTTP_400_BAD_REQUEST)
+        log.error('Please provide the course and mentor details.')
+        return Response({'response':'Please provide the course and mentor details.'})

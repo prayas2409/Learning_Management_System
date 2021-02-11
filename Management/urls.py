@@ -25,8 +25,8 @@ urlpatterns = [
     path('students/new-students/', views.NewStudents.as_view(), name='new-students'),
     path('students/performance/<int:student_id>/', views.StudentPerformance.as_view(), name='student-performance'),
     path('students/performance/update/<int:student_id>/<int:week_no>', views.StudentPerfromanceUpdate.as_view(),
-          name='performance-update'),
-    
+          name='performance-update'),  
     path('students/performance/update-file', views.UpdateScoreFromExcel.as_view(), name='update-file'),
+    path('add-student/', views.AddStudent.as_view(), name='add-student'),
 ]
 

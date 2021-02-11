@@ -190,4 +190,12 @@ class ExcelDataSerializer(serializers.Serializer):
     def validate(self, data):
         if data['file']._name.split('.')[1] not in ['xlsx']:
             raise serializers.ValidationError('response: Invalid file format. [.xlsx] expected')
-        return data
+        return data 
+
+
+class AddStudentSerializer(serializers.ModelSerializer):
+    student = StudentCourseMentorUpdateSerializer(required=False)
+    name = serializers.CharField(max_length=50, required=False)
+    class Meta:
+        model = User
+        fields = ['name', 'email', 'mobile', 'student']

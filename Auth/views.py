@@ -100,14 +100,14 @@ class UserLoginView(GenericAPIView):
         username = serializer.data.get('username')
         password = serializer.data.get('password')
         user = authenticate(request, username=username, password=password)
-        role = user.role
+        # role = user.role
         if user:
             if user.last_login == None and user.is_superuser == False:
                 token = request.GET.get('token')
                 if JWTAuth.verifyToken(token):  
                     log.info('login successful but need to change password')
                     response = Response({'response': 'You are logged in! Now you need to change password to access resources',
-                                        'role': role,
+                                        # 'role': role,
                                     'link': reverse('change-password-on-first-access',
                                                                                 args=[token])}, status=status.HTTP_200_OK)
                     response['Authorization'] = JWTAuth.getToken(username=username, password=password)
@@ -119,7 +119,7 @@ class UserLoginView(GenericAPIView):
             user.last_login = str(datetime.datetime.now())
             user.save()
             log.info('successful login')
-            response = Response({'response': f'You are logged in as {role}'}, status=status.HTTP_200_OK)
+            response = Response({'response': f'You are logged in '}, status=status.HTTP_200_OK)
             response['Authorization'] = JWTAuth.getToken(username=username, password=password)
             return response
         log.info('bad credential found')

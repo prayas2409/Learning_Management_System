@@ -30,9 +30,9 @@ class TokenAuthenticationOnFirstAccess(object):
 
     def __call__(self, request, token):
         jwtData = JWTAuth.verifyToken(request.headers.get('Authorization'))
-        user = User.objects.get(username=jwtData.get('username'))
-        request.META['user'] = user
         if jwtData:
+            user = User.objects.get(username=jwtData.get('username'))
+            request.META['user'] = user
             return self.get_response(request, token)
         return JsonResponse({'response': 'You are not logged in!'}, status=status.HTTP_403_FORBIDDEN)
 

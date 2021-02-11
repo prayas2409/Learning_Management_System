@@ -20,6 +20,8 @@ from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
 from Management.utils import GeneratePassword
 import datetime
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -68,6 +70,7 @@ class UserRegistrationView(GenericAPIView):
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
+    token_param_config = openapi.Parameter('token',in_=openapi.IN_QUERY,description='Description',type=openapi.TYPE_STRING)
 
     def get(self, request, token=None):
         """This API is used to inform the client that its a genuine login request and it can serve the login interface
@@ -86,6 +89,7 @@ class UserLoginView(GenericAPIView):
             log.info('Valid login page request')
             return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
 
+    @swagger_auto_schema(manual_parameters=[token_param_config])
     def post(self, request, token=None):
         """This API is used to log user in
         @param request: basic credential
@@ -96,14 +100,17 @@ class UserLoginView(GenericAPIView):
         username = serializer.data.get('username')
         password = serializer.data.get('password')
         user = authenticate(request, username=username, password=password)
+        # role = user.role
         if user:
-            if user.last_login != None and user.is_superuser == False:
+            if user.last_login == None and user.is_superuser == False:
                 token = request.GET.get('token')
-                if JWTAuth.verifyToken(token):
+                if JWTAuth.verifyToken(token):  
                     log.info('login successful but need to change password')
-                    return Response({'response': 'You are logged in! Now you need to change password to access resources',
+                    response = Response({'response': 'You are logged in! Now you need to change password to access resources',
                                     'link': reverse('change-password-on-first-access',
                                                                                 args=[token])}, status=status.HTTP_200_OK)
+                    response['Authorization'] = JWTAuth.getToken(username=username, password=password)
+                    return response
                 log.info('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
@@ -111,7 +118,7 @@ class UserLoginView(GenericAPIView):
             user.last_login = str(datetime.datetime.now())
             user.save()
             log.info('successful login')
-            response = Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
+            response = Response({'response': f'You are logged in'}, status=status.HTTP_200_OK)
             response['Authorization'] = JWTAuth.getToken(username=username, password=password)
             return response
         log.info('bad credential found')
@@ -273,7 +280,7 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         if JWTAuth.verifyToken(token):
             request.META['user'].set_password(raw_password=serializer.data.get('new_password'))
-            request.META['user'].last_login = None
+            request.META['user'].last_login = str(datetime.datetime.now())
             request.META['user'].save()
             TokenBlackList.objects.create(token=token)
             log.info('password is changed successfully')
@@ -303,7 +310,6 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
         if user and user.last_login != None:
             password = GeneratePassword.generate_password(self)
             user.set_password(raw_password=password)
-            user.last_login = datetime.datetime.now().time()
             user.save()
             data = {
                 'name': user.get_full_name(),
@@ -316,6 +322,6 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
             }
             Email.sendEmail(Email.configureAddUserEmail(data))
             log.info('new login link is shared on mail')
-            return Response({'response': 'New login link is shared on your mail'}, status=status.HTTP_200_OK)
+            return Response({'response': 'New login link is shared on your mail','token':data['token']}, status=status.HTTP_200_OK)
         log.info('not applicable for this user')
         return Response({'response': 'Not applicable for you!'}, status=status.HTTP_406_NOT_ACCEPTABLE)

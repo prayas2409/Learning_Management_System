@@ -14,11 +14,11 @@ class GeneratePassword:
     def generate_password(self):
         # generates letters
         letters = string.ascii_letters
-        str_part = ''.join(random.choice(letters) for i in range(10)) 
+        str_part = ''.join(random.choice(letters) for i in range(5)) 
 
         # generates digits
         digits = string.digits
-        int_part = ''.join(random.choice(digits) for i in range(10)) 
+        int_part = ''.join(random.choice(digits) for i in range(5)) 
 
         return str_part+"-"+int_part
 
@@ -48,3 +48,11 @@ class Pattern(enum.Enum):
     GIT_PATTERN = "^(https://github.com/)[a-zA-Z0-9]{1,}(/)?"
     MOBILE_PATTERN = "^(\+91|91|0)?[6-9]{1}[0-9]{9}$"
     NAME_PATTERN = "^[A-Z]{1}[a-zA-Z]{2,}$"
+
+
+    {
+  "response": "A new Admin is added",
+  "username": "test",
+  "password": "iRUiohzCUP-6340776159",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6InRlc3QiLCJwYXNzd29yZCI6InBia2RmMl9zaGEyNTYkMjE2MDAwJHpuRjJrSTFjZEpxTSQ3Q2d6RHBUa01kK3FkeUFyaTdhSWFON0c1V1pFRUl4Mm5UQnlvb3h6WVQ4PSIsImV4cCI6MTYxMzI1MDE1NX0.NINK0bNj4uANDXDWHn2SUYm66oPQUCk94gZ645ONWLI"
+}

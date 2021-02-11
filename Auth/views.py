@@ -18,6 +18,8 @@ import sys
 sys.path.append('..')
 from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
+from Management.utils import GeneratePassword
+import datetime
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -45,7 +47,7 @@ class UserRegistrationView(GenericAPIView):
         email = serializer.data.get('email')
         mobile = serializer.data.get('mobile')
         role = serializer.data.get('role')
-        password = str(random.randint(100000, 999999))
+        password = GeneratePassword.generate_password(self)
         user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name,
                                         email=email, mobile=mobile, role=role, password=password)
         data = {
@@ -95,7 +97,7 @@ class UserLoginView(GenericAPIView):
         password = serializer.data.get('password')
         user = authenticate(request, username=username, password=password)
         if user:
-            if user.is_first_time_login and user.is_superuser == False:
+            if user.last_login != None and user.is_superuser == False:
                 token = request.GET.get('token')
                 if JWTAuth.verifyToken(token):
                     log.info('login successful but need to change password')
@@ -105,6 +107,9 @@ class UserLoginView(GenericAPIView):
                 log.info('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
+
+            user.last_login = str(datetime.datetime.now())
+            user.save()
             log.info('successful login')
             response = Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
             response['Authorization'] = JWTAuth.getToken(username=username, password=password)
@@ -268,7 +273,7 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         if JWTAuth.verifyToken(token):
             request.META['user'].set_password(raw_password=serializer.data.get('new_password'))
-            request.META['user'].is_first_time_login = False
+            request.META['user'].last_login = None
             request.META['user'].save()
             TokenBlackList.objects.create(token=token)
             log.info('password is changed successfully')
@@ -295,9 +300,10 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
         except User.DoesNotExist:
             log.info('This mail id is not registered')
             return Response({'response': 'This Mail id is not registered'}, status=status.HTTP_404_NOT_FOUND)
-        if user and user.is_first_time_login:
-            password = str(random.randint(100000, 999999))
+        if user and user.last_login != None:
+            password = GeneratePassword.generate_password(self)
             user.set_password(raw_password=password)
+            user.last_login = datetime.datetime.now().time()
             user.save()
             data = {
                 'name': user.get_full_name(),

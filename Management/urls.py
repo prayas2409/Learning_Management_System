@@ -28,5 +28,6 @@ urlpatterns = [
           name='performance-update'),
     
     path('students/performance/update-file', views.UpdateScoreFromExcel.as_view(), name='update-file'),
+    path('mentor-student-course/<int:mentor_id>/<int:course_id>/', views.MentorStudentCourse.as_view(), name='mentor-student-course'),
 ]
 

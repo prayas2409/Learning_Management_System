@@ -10,6 +10,7 @@ from .serializers import CourseSerializer, CourseMentorSerializer, MentorSeriali
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
     NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer
 import pandas
+from .utils import ExcelHeader, ValueRange, Pattern
 import sys
 sys.path.append('..')
 from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent, Role
@@ -539,10 +540,10 @@ class StudentPerfromanceUpdate(GenericAPIView):
 
 
 
-@method_decorator(TokenAuthentication, name='dispatch')
+# @method_decorator(TokenAuthentication, name='dispatch')
 class UpdateScoreFromExcel(GenericAPIView):
     serializer_class = ExcelDataSerializer
-    permission_classes = [isAdmin]
+    # permission_classes = [isAdmin]
 
     def post(self, request):
         try:
@@ -551,9 +552,51 @@ class UpdateScoreFromExcel(GenericAPIView):
             serializer.is_valid(raise_exception=True)
             file = serializer.validated_data['file']
             df = pandas.read_excel(file)
-            print(set(df.columns))
-            print(df)
-            return Response('res')
+
+            # checking the header 
+            input_file_header_set = set(df.columns)
+            required_header_set = set([ExcelHeader.SID.value, ExcelHeader.CID.value, 
+            ExcelHeader.WEEK.value, ExcelHeader.SCORE.value])
+            if input_file_header_set != required_header_set:
+                return Response({f'response':'Check file Header. '+ str(required_header_set) + ' expeced'},
+                status=status.HTTP_400_BAD_REQUEST)
+
+            #checking the null values
+            if df.isnull().values.any():
+                null_list = [(col.value, df.loc[:,col.value].isnull().sum()) for col in ExcelHeader if df.loc[:,col.value].isnull().sum() > 0 ]
+                return Response({f'response':'Null values found ' + str(null_list)},
+                status=status.HTTP_400_BAD_REQUEST)
+            
+            #checking the data types
+            if (df[ExcelHeader.SCORE.value].map(type) == str).any():
+                return Response({'response':ExcelHeader.SCORE.value + ' should not be a string'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # checking the range
+            if df[ExcelHeader.SCORE.value].max() > ValueRange.SCORE_MAX_VALUE.value:
+                return Response({'response':ExcelHeader.SCORE.value + ' should not be a beyond ' + str(ValueRange.SCORE_MAX_VALUE.value)}, status=status.HTTP_400_BAD_REQUEST)
+
+            if df[ExcelHeader.SCORE.value].min() < ValueRange.SCORE_MIN_VALUE.value:
+                return Response({'response':ExcelHeader.SCORE.value + ' should not be a bellow ' + str(ValueRange.SCORE_MIN_VALUE.value)}, status=status.HTTP_400_BAD_REQUEST)
+            
+            #checking the CID pattern
+            if (df[ExcelHeader.CID.value].map(type) == int).any() or not df[ExcelHeader.CID.value].str.match(Pattern.CID.value).all():
+                return Response({'response':'CID pattern does not match, [CI-0000] expected'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # checking the CID pattern
+            if (df[ExcelHeader.SID.value].map(type) == int).any() or not df[ExcelHeader.SID.value].str.match(Pattern.SID.value).all():
+                return Response({'response':'SID pattern does not match, [SI-0000] expected'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            #checking week pattern
+            if (df[ExcelHeader.WEEK.value].map(type) == int).any() or not df[ExcelHeader.WEEK.value].str.match(Pattern.WEEK.value).all():
+                return Response({'response':'WEEK pattern does not match, [week xx, Week xx, WEEK xx] expected'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # list of set of CID, SID and WEEK to check duplicate records
+            row_tuple_list = [( row[1][0], row[1][1], row[1][2].split(' ')[1] ) for row in df.iloc[0:,0:3].iterrows()]
+        
+            #checking duplicate records
+            row_tuple_list_set = set(row_tuple_list)
+            if len(row_tuple_list) != len(row_tuple_list_set):
+                return Response({'response':'Duplicate reocrds found. [SID, CID, WEEK] should not be duplicate'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'response':str(e) }, status=status.HTTP_400_BAD_REQUEST)
 

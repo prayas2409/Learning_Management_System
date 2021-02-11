@@ -29,7 +29,7 @@ class TokenAuthenticationOnFirstAccess(object):
         self.get_response = get_response
 
     def __call__(self, request, token):
-        jwtData = JWTAuth.verifyToken(token)
+        jwtData = JWTAuth.verifyToken(request.headers.get('Authorization'))
         user = User.objects.get(username=jwtData.get('username'))
         request.META['user'] = user
         if jwtData:

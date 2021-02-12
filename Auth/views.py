@@ -15,6 +15,7 @@ import random
 from django.urls import reverse
 from .tasks import send_registration_mail, send_password_reset_mail
 import sys
+
 sys.path.append('..')
 from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
@@ -63,14 +64,16 @@ class UserRegistrationView(GenericAPIView):
         }
         send_registration_mail.delay(data)
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
-        return Response({'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
-                         'token': data['token']}, status=status.HTTP_201_CREATED)
+        return Response(
+            {'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
+             'token': data['token']}, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
-    token_param_config = openapi.Parameter('token',in_=openapi.IN_QUERY,description='Description',type=openapi.TYPE_STRING)
+    token_param_config = openapi.Parameter('token', in_=openapi.IN_QUERY, description='Description',
+                                           type=openapi.TYPE_STRING)
 
     def get(self, request, token=None):
         """This API is used to inform the client that its a genuine login request and it can serve the login interface
@@ -104,12 +107,13 @@ class UserLoginView(GenericAPIView):
             role = user.role
             if user.last_login == None and user.is_superuser == False:
                 token = request.GET.get('token')
-                if JWTAuth.verifyToken(token):  
+                if JWTAuth.verifyToken(token):
                     log.info('login successful but need to change password')
-                    response = Response({'response': 'You are logged in! Now you need to change password to access resources',
-                                        'role': role,
-                                    'link': reverse('change-password-on-first-access',
-                                                                                args=[token])}, status=status.HTTP_200_OK)
+                    response = Response(
+                        {'response': 'You are logged in! Now you need to change password to access resources',
+                         'role': role,
+                         'link': reverse('change-password-on-first-access',
+                                         args=[token])}, status=status.HTTP_200_OK)
                     response['Authorization'] = JWTAuth.getToken(username=username, password=password)
                     return response
                 log.info('Need to use the link shared in mail')
@@ -119,7 +123,8 @@ class UserLoginView(GenericAPIView):
             user.last_login = str(datetime.datetime.now())
             user.save()
             log.info('successful login')
-            response = Response({'response': f'You are logged in as {role} '}, status=status.HTTP_200_OK)
+            response = Response({'response': f'You are logged in successfully', 'username': username, 'role': role},
+                                status=status.HTTP_200_OK)
             response['Authorization'] = JWTAuth.getToken(username=username, password=password)
             return response
         log.info('bad credential found')
@@ -286,7 +291,7 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
             TokenBlackList.objects.create(token=token)
             log.info('password is changed successfully')
             return Response({'response': 'Your password is changed successfully! Now You can access resources'},
-                                status=status.HTTP_200_OK)
+                            status=status.HTTP_200_OK)
         log.info('This link is expired')
         return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -323,6 +328,7 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
             }
             Email.sendEmail(Email.configureAddUserEmail(data))
             log.info('new login link is shared on mail')
-            return Response({'response': 'New login link is shared on your mail','token':data['token']}, status=status.HTTP_200_OK)
+            return Response({'response': 'New login link is shared on your mail', 'token': data['token']},
+                            status=status.HTTP_200_OK)
         log.info('not applicable for this user')
         return Response({'response': 'Not applicable for you!'}, status=status.HTTP_406_NOT_ACCEPTABLE)

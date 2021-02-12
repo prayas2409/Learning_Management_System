@@ -213,7 +213,7 @@ class MentorCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mentor
         fields = ['mid', 'mentor', 'course']
-        return data 
+        return data
 
 
 class AddStudentSerializer(serializers.ModelSerializer):

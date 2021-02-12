@@ -41,13 +41,6 @@ class UserLoginSerializer(serializers.ModelSerializer):
         extra_kwargs = {'role':{'read_only':True}}
 
 
-
-    class Meta:
-        model = User
-        fields = ['username', 'password', 'role']
-        extra_kwargs = {'role': {'read_only': True}}
-
-
 class ChangeUserPasswordSerializer(serializers.Serializer):
     """This serializer is used to serialize change password credential inputs"""
 

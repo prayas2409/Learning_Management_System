@@ -201,10 +201,10 @@ class AddMentorSerializer(serializers.ModelSerializer):
 
 class MentorDetailSerializer(serializers.ModelSerializer):
     mentor = AddMentorSerializer(required=False)
-
+    name = serializers.CharField(max_length=50, required=False)
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'mobile', 'mentor']
+        fields = ['name', 'email', 'mobile', 'mentor']
 
 class MentorCourseSerializer(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
@@ -213,7 +213,6 @@ class MentorCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mentor
         fields = ['mid', 'mentor', 'course']
-        return data
 
 
 class AddStudentSerializer(serializers.ModelSerializer):

@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddStudentSerializer
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddStudentSerializer,MentorStudentCourseSerializer
 import pandas
 import sys
 sys.path.append('..')
@@ -596,3 +596,30 @@ class AddStudent(GenericAPIView):
         except Exception as e:
             log.error(e)
             return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class MentorStudentCourse(GenericAPIView):
+    serializer_class = MentorStudentCourseSerializer
+    permission_classes = [isAdmin]
+    queryset = Performance.objects.all()
+
+    def get(self, request, mentor_id, course_id):
+        """
+            This API is used to get the list of students according to mentor_id and course_id
+            @param mentor_id: mentor primary key
+            @param course_id: course primary key
+            @return: List of Students
+        """
+        try:
+            query = self.queryset.filter(mentor_id=mentor_id, course_id=course_id)
+            serializer = self.serializer_class(query, many=True)
+            if not serializer.data:
+                log.error('serializer data is empty, from get_MentorStudentCourse()')
+                return Response({'response': 'Records not found, check mentor_id/Course_id..!!'}, status=status.HTTP_404_NOT_FOUND)
+            log.info("Fetched List of Students according to Mentor_id and Course_id, from get_MentorStudentCourse() ")
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            log.error("Something went wrong, from get_MentorStudentCourse()")
+            return Response("Something went wrong", status=status.HTTP_400_BAD_REQUEST)
+

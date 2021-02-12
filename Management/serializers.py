@@ -12,7 +12,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['id', 'course_name', 'cid', 'duration_weeks', 'description', 'course_price']
-        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}, 'cid': {'read_only': True} }
+        extra_kwargs = {'id': {'read_only': True}, 'duration_weeks': {'required': True}, 'cid': {'read_only': True}}
 
     def validate(self, data):
         data['course_name'] = data['course_name'].upper()
@@ -199,3 +199,14 @@ class AddStudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['name', 'email', 'mobile', 'student']
+
+
+class MentorStudentCourseSerializer(serializers.Serializer):
+    mentor = serializers.StringRelatedField(read_only=True)
+    student = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+    week_no = serializers.StringRelatedField(read_only=True)
+    score = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Performance

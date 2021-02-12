@@ -1,9 +1,11 @@
 from django.test import TestCase
 from django.test import Client
-from ..models import User, Course
+from ..models import User, Course, Mentor
 from django.urls import reverse
 from rest_framework import status
 import json
+
+from ..serializers import CourseMentorSerializer
 
 
 class TestManagementApp(TestCase):
@@ -12,11 +14,11 @@ class TestManagementApp(TestCase):
         User.objects.create_user(username='ranjith', password='ranjith123', role='Admin',
                                  is_first_time_login=False)
         # Engineer user
-        self.Mentor = User.objects.create_user(username='RahulKL', password='rahul123', role='Engineer',
+        User.objects.create_user(username='RahulKL', password='rahul123', role='Engineer',
                                  is_first_time_login=False)
         # Mentor user
-        User.objects.create_user(username='Shreyas', password='Shreyas', role='Mentor',
-                                 is_first_time_login=False)
+        self.Mentor = User.objects.create_user(username='Shreyas', password='Shreyas', role='Mentor',
+                                               is_first_time_login=False)
 
         self.client = Client()
 
@@ -34,8 +36,14 @@ class TestManagementApp(TestCase):
             'course_price': '12000'
         }
 
-        self.course = Course.objects.create(course_name = 'Java', duration_weeks = '6', description= 'Python desk', course_price = '12000')
+        self.course = Course.objects.create(course_name='Java', duration_weeks='6', description='Python desk',
+                                            course_price='12000')
 
+        self.mentor_course = Mentor.objects.get(mentor=self.Mentor)
+
+        # Assign course to mentor-course object
+        self.mentor_course.course.add(self.course)
+        self.mentor_course.save()
 
     ### Test cases for Add Course API
 
@@ -111,7 +119,8 @@ class TestManagementApp(TestCase):
     ### Test Cases for MentorStudentCourse API
 
     def test_Listing_students_with_mentorid_courseid_api_without_login_without_alloting_course_to_mentor(self):
-        response = self.client.get(reverse('mentor-student-course', kwargs={'mentor_id':self.Mentor.id , 'course_id':self.course.id}))
+        response = self.client.get(
+            reverse('mentor-student-course', kwargs={'mentor_id': self.Mentor.id, 'course_id': self.course.id}))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_Listing_students_with_mentorid_courseid_api_after_login_without_alloting_course_to_mentor(self):
@@ -124,5 +133,22 @@ class TestManagementApp(TestCase):
         auth_headers = {
             'HTTP_AUTHORIZATION': token,
         }
-        response = self.client.get(reverse('mentor-student-course', kwargs={'mentor_id':self.Mentor.id , 'course_id':self.course.id}), **auth_headers)
+        response = self.client.get(
+            reverse('mentor-student-course', kwargs={'mentor_id': self.Mentor.id, 'course_id': self.course.id}),
+            **auth_headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_Listing_students_with_mentorid_courseid_api_after_login(self):
+        self.valid_admin_credential = json.dumps({
+            'username': 'ranjith',
+            'password': 'ranjith123'
+        })
+        login = self.client.post(reverse('login'), data=self.valid_admin_credential, content_type='application/json')
+        token = login['Authorization']
+        auth_headers = {
+            'HTTP_AUTHORIZATION': token,
+        }
+        response = self.client.get(
+            reverse('mentor-student-course', kwargs={'mentor_id': self.mentor_course.id, 'course_id': self.course.id}),
+            **auth_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

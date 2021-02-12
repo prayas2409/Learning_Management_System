@@ -2,8 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('course/', views.AddCourseAPIView.as_view(), name='add-course'),
-    path('courses/', views.AllCoursesAPIView.as_view(), name='all-courses'),
+    path('add-course/', views.AddCourseAPIView.as_view(), name='add-course'),
+    path('all-courses/', views.AllCoursesAPIView.as_view(), name='all-courses'),
     path('update-course/<int:course_id>/', views.UpdateCourseAPIView.as_view(), name='update-course'),
     path('delete-course/<int:id>/', views.DeleteCourseAPIView.as_view(), name='delete-course'),
     path('course-mentor/<int:mentor_id>/', views.CourseToMentorMapAPIView.as_view(), name='course-mentor'),
@@ -28,6 +28,5 @@ urlpatterns = [
           name='performance-update'),
     
     path('students/performance/update-file', views.UpdateScoreFromExcel.as_view(), name='update-file'),
-    path('mentor-student-course/<int:mentor_id>/<int:course_id>/', views.MentorStudentCourse.as_view(), name='mentor-student-course'),
 ]
 

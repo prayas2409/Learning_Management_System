@@ -171,10 +171,3 @@ class ManagementAPITest(TestCase):
         response = self.client.post(reverse('mentor'), **auth_headers,
                                     data=json.dumps(self.valid_mentor_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_add_mentors_with_valid_payload_after_login_by_mentor_credentials(self):
-        """This test case is for testing the add mentor API with mentor login credentials"""
-        auth_headers = self.login_method(self.mentor_login_payload)
-        response = self.client.post(reverse('mentordetails'), **auth_headers,
-                                    content_type=CONTENT_TYPE)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)

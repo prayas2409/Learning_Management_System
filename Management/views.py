@@ -564,9 +564,15 @@ class UpdateScoreFromExcel(GenericAPIView):
 class MentorStudentCourse(GenericAPIView):
     serializer_class = MentorStudentCourseSerializer
     permission_classes = [isAdmin]
-    queryset = StudentCourseMentor.objects.all()
+    queryset = Performance.objects.all()
 
     def get(self, request, mentor_id, course_id):
+        """
+            This API is used to get the list of students according to mentor_id and course_id
+            @param mentor_id: mentor primary key
+            @param course_id: course primary key
+            @return: List of Students
+        """
         try:
             query = self.queryset.filter(mentor_id=mentor_id, course_id=course_id)
             serializer = self.serializer_class(query, many=True)

@@ -1,14 +1,47 @@
 from django.db import models
 import sys
-from .utils import Degree
+from .utils import Degree, Default
 
 sys.path.append('..')
 from Auth.models import User
 
 
+def get_course_id():
+    last_record = Course.objects.all().last()
+    if last_record:
+        str_part, int_part = last_record.cid.split('-')
+        int_part = int(int_part)
+        int_part += 1
+        return str_part + '-' + str(int_part)
+    return Default.CID.value
+    
+def get_student_id():
+    last_record = Student.objects.all().last()
+    if last_record:
+        str_part, int_part = last_record.sid.split('-')
+        int_part = int(int_part)
+        int_part += 1
+        return str_part + '-' + str(int_part)
+    return Default.SID.value
+
+def get_mentor_id():
+    last_record = Mentor.objects.all().last()
+    if last_record:
+        str_part, int_part = last_record.mid.split('-')
+        int_part = int(int_part)
+        int_part += 1
+        return str_part + '-' + str(int_part)
+    return Default.MID.value
+    
 class Course(models.Model):
-    course_name = models.CharField(max_length=30, unique=True)
+    """
+        This model is used to create course table with below fields
+    """
+    course_name = models.CharField(max_length=50, unique=True)
+    cid = models.CharField(max_length=10, unique=True, default=get_course_id)
+    course_price = models.IntegerField(default=0)
     duration_weeks = models.IntegerField(default=0, null=True)
+    description = models.CharField(max_length=150, default=None, null=True, blank=True)
 
     def __str__(self):
         return self.course_name
@@ -16,6 +49,8 @@ class Course(models.Model):
 
 class Mentor(models.Model):
     mentor = models.OneToOneField(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='mentor/',max_length=255, null=True, blank=True)
+    mid = models.CharField(max_length=10, unique=True, default=get_mentor_id)
     course = models.ManyToManyField(to=Course, related_name='course_mentor')
 
     def __str__(self):
@@ -32,6 +67,8 @@ class Student(models.Model):
         (5, 5),
     )
     student = models.OneToOneField(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='student/',max_length=255, null=True, blank=True)
+    sid = models.CharField(max_length=10, unique=True, default=get_student_id)
     alt_number = models.CharField(max_length=13, default=None, null=True, blank=True)
     relation_with_alt_number_holder = models.CharField(max_length=20, default=None, null=True, blank=True)
     current_location = models.CharField(max_length=50, default=None, null=True, blank=True)

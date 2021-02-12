@@ -1,4 +1,5 @@
 import enum
+from . import models
 
 
 class Degree(enum.Enum):
@@ -17,7 +18,9 @@ class Pattern(enum.Enum):
 
     SID = '^(SI-)[1-9]{1}[0-9]{3}$'
     CID = '^(CI-)[1-9]{1}[0-9]{3}$'
-    WEEK = '^(Week|week|WEEK)[ ][1-9]{1,2}$'
+    MID = '^(MI-)[1-9]{1}[0-9]{3}$'
+    WEEK = '^(Week|week|WEEK)[ ][1]?[0-9]{1}$'
+    REVIEW_DATE = '^(((0[1-9]|[12][0-9]|30)[-\/]?(0[13-9]|1[012])|31[-\/]?(0[13578]|1[02])|(0[1-9]|1[0-9]|2[0-8])[-\/]?02)[-]?[0-9]{4}|29[-\/]?02[-\/]?([0-9]{2}(([2468][048]|[02468][48])|[13579][26])|([13579][26]|[02468][048]|0[0-9]|1[0-6])00))$'
 
 
 class ExcelHeader(enum.Enum):
@@ -25,10 +28,36 @@ class ExcelHeader(enum.Enum):
     CID = 'CID'
     WEEK = 'WEEK'
     SCORE = 'SCORE'
+    REVIEW_DATE = 'REVIEW DATE'
+    REMARKS = 'REMARKS'
+    MID = 'MID'
+
 
 class ValueRange(enum.Enum):
     SCORE_MAX_VALUE = 10
     SCORE_MIN_VALUE = 0
+
+
+class Default(enum.Enum):
+    SID = 'SI-1000'
+    CID = 'CI-1000'
+    MID = 'MI-1000'
     
 
+class Configure:
+    @staticmethod
+    def get_configured_excel_data(row, mentor_id):
+        """This function configures excel data and returns """
+        dd, mm, yyyy = row[1][4].split('-') # formating date
+        date = f"{yyyy}-{mm}-{dd}"
 
+        data = {
+        'student': models.Student.objects.get(sid=row[1][0]).id,
+        'course': models.Course.objects.get(cid=row[1][1]).id,
+        'week_no': row[1][2].split(' ')[1],
+        'score': row[1][3],
+        'review_date': date,
+        'remark': row[1][-1],
+        'mentor': mentor_id
+        }
+        return data

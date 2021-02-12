@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from rest_framework import status
+from rest_framework import authentication, status
 from rest_framework.response import Response
 from .models import Course, Mentor, StudentCourseMentor, Student, Education, Performance
 from django.utils.decorators import method_decorator
@@ -8,14 +8,16 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer
 import pandas
-from .utils import ExcelHeader, ValueRange, Pattern
+from .utils import ExcelHeader, ValueRange, Pattern, Configure
+from .excel_validator import ExcelException, ExcelValidator
 import sys
 sys.path.append('..')
 from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent, Role
 from Auth.middlewares import TokenAuthentication
 from LMS.loggerConfig import log
+from Auth.models import User
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -540,64 +542,61 @@ class StudentPerfromanceUpdate(GenericAPIView):
 
 
 
-# @method_decorator(TokenAuthentication, name='dispatch')
+@method_decorator(TokenAuthentication, name='dispatch')
 class UpdateScoreFromExcel(GenericAPIView):
     serializer_class = ExcelDataSerializer
-    # permission_classes = [isAdmin]
+    permission_classes = [isMentorOrAdmin]
 
     def post(self, request):
         try:
             file = request.FILES.get('file')
             serializer = self.serializer_class(data={'file': file})
-            serializer.is_valid(raise_exception=True)
-            file = serializer.validated_data['file']
-            df = pandas.read_excel(file)
-
-            # checking the header 
-            input_file_header_set = set(df.columns)
-            required_header_set = set([ExcelHeader.SID.value, ExcelHeader.CID.value, 
-            ExcelHeader.WEEK.value, ExcelHeader.SCORE.value])
-            if input_file_header_set != required_header_set:
-                return Response({f'response':'Check file Header. '+ str(required_header_set) + ' expeced'},
-                status=status.HTTP_400_BAD_REQUEST)
-
-            #checking the null values
-            if df.isnull().values.any():
-                null_list = [(col.value, df.loc[:,col.value].isnull().sum()) for col in ExcelHeader if df.loc[:,col.value].isnull().sum() > 0 ]
-                return Response({f'response':'Null values found ' + str(null_list)},
-                status=status.HTTP_400_BAD_REQUEST)
-            
-            #checking the data types
-            if (df[ExcelHeader.SCORE.value].map(type) == str).any():
-                return Response({'response':ExcelHeader.SCORE.value + ' should not be a string'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # checking the range
-            if df[ExcelHeader.SCORE.value].max() > ValueRange.SCORE_MAX_VALUE.value:
-                return Response({'response':ExcelHeader.SCORE.value + ' should not be a beyond ' + str(ValueRange.SCORE_MAX_VALUE.value)}, status=status.HTTP_400_BAD_REQUEST)
-
-            if df[ExcelHeader.SCORE.value].min() < ValueRange.SCORE_MIN_VALUE.value:
-                return Response({'response':ExcelHeader.SCORE.value + ' should not be a bellow ' + str(ValueRange.SCORE_MIN_VALUE.value)}, status=status.HTTP_400_BAD_REQUEST)
-            
-            #checking the CID pattern
-            if (df[ExcelHeader.CID.value].map(type) == int).any() or not df[ExcelHeader.CID.value].str.match(Pattern.CID.value).all():
-                return Response({'response':'CID pattern does not match, [CI-0000] expected'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # checking the CID pattern
-            if (df[ExcelHeader.SID.value].map(type) == int).any() or not df[ExcelHeader.SID.value].str.match(Pattern.SID.value).all():
-                return Response({'response':'SID pattern does not match, [SI-0000] expected'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            #checking week pattern
-            if (df[ExcelHeader.WEEK.value].map(type) == int).any() or not df[ExcelHeader.WEEK.value].str.match(Pattern.WEEK.value).all():
-                return Response({'response':'WEEK pattern does not match, [week xx, Week xx, WEEK xx] expected'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # list of set of CID, SID and WEEK to check duplicate records
-            row_tuple_list = [( row[1][0], row[1][1], row[1][2].split(' ')[1] ) for row in df.iloc[0:,0:3].iterrows()]
-        
-            #checking duplicate records
-            row_tuple_list_set = set(row_tuple_list)
-            if len(row_tuple_list) != len(row_tuple_list_set):
-                return Response({'response':'Duplicate reocrds found. [SID, CID, WEEK] should not be duplicate'}, status=status.HTTP_400_BAD_REQUEST)
+            if serializer.is_valid():
+                file = serializer.validated_data['file']
+                df = pandas.read_excel(file)
+                role = request.META.get('user').role
+                ExcelValidator.validateExcel(df, role)                # Validating the excel file
+                error_message = {}
+                for row_no, row in enumerate(df.iterrows()):
+                    try:
+                        if request.META.get('user').role == Role.MENTOR.value:
+                            mentor_id = request.META.get('user').mentor.id
+                        else:
+                            mentor_id = Mentor.objects.get(mid=row[1][-2]).id
+                        data = Configure.get_configured_excel_data(row, mentor_id) # configuring excel data
+                        serializer = PerformanceUpdateViaExcelSerializer(data=data, context={'user':request.META.get('user')})
+                        if serializer.is_valid():
+                            student = serializer.validated_data['student']
+                            course = serializer.validated_data['course']
+                            mentor = serializer.validated_data['mentor']
+                            week_no = serializer.validated_data['week_no']
+                            map_obj = StudentCourseMentor.objects.get(student=student)
+                            duplicate_entry = False
+                            performance_list = Performance.objects.filter(student=student)
+                            for performance in performance_list:
+                            # checking duplicate entry
+                                if performance.student == student and performance.week_no == week_no and performance.course == course:
+                                    error_message[f"Row_no-{row_no+1}"] = 'Duplicate Entry found, Data is already saved'
+                                    duplicate_entry = True  
+                            if not duplicate_entry:
+                                    #checking student mentor course mapping
+                                if map_obj.course == course and map_obj.mentor == mentor and course in mentor.course.all():
+                                    serializer.save()
+                                else:
+                                    error_message[f"Row_no-{row_no+1}"] = 'course-mentor-student mapping does not exist'
+                            else:
+                                pass
+                        else:
+                            error_message[f"Row_no-{row_no+1}"] = serializer.errors
+                    except (Student.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist, Course.DoesNotExist) as e:
+                        error_message[f"Row_no-{row_no+1}"] = str(e)
+                if error_message:
+                    msg = 'Record Partially updated! ' + str(error_message)
+                else:
+                    msg = 'Record updated successfully'
+                return Response({"response":msg}, status=status.HTTP_200_OK)
+            return Response({'response':serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)    
+        except ExcelException as e:
+            return Response({'response':str(e)}, status=status.HTTP_400_BAD_REQUEST)  
         except Exception as e:
-            return Response({'response':str(e) }, status=status.HTTP_400_BAD_REQUEST)
-
-    
+            return Response({'response':str(e)}, status=status.HTTP_400_BAD_REQUEST)

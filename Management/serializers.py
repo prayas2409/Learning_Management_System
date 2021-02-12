@@ -194,13 +194,11 @@ class ExcelDataSerializer(serializers.Serializer):
 
 
 class MentorStudentCourseSerializer(serializers.Serializer):
-    id = serializers.StringRelatedField(read_only=True)
-    mentor_id = serializers.StringRelatedField(read_only=True)
     mentor = serializers.StringRelatedField(read_only=True)
-    mid = serializers.StringRelatedField(read_only=True)
     student = serializers.StringRelatedField(read_only=True)
-    sid = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
+    week_no = serializers.StringRelatedField(read_only=True)
+    score = serializers.StringRelatedField(read_only=True)
 
     class Meta:
-        model = StudentCourseMentor
+        model = Performance

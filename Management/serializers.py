@@ -188,7 +188,7 @@ class ExcelDataSerializer(serializers.Serializer):
 
     def validate(self, data):
         if data['file']._name.split('.')[1] not in ['xlsx']:
-            raise serializers.ValidationError('response: Invalid file format. [.xlsx] expected')
+            raise serializers.ValidationError('Invalid file format. [.xlsx] expected')
         return data
 
 
@@ -221,3 +221,14 @@ class AddStudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['name', 'email', 'mobile', 'student']
+
+class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Performance
+        fields = ['student', 'course', 'mentor', 'score', 'week_no', 'remark', 'review_date', 'update_by']
+        read_only_fields = ('update_by',)
+
+    def validate(self, data):
+        data['update_by'] = self.context['user']
+        return data

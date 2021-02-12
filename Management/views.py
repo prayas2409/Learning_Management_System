@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from rest_framework import status
+from rest_framework import authentication, status
 from rest_framework.response import Response
 
 from Auth.models import User
@@ -8,12 +8,13 @@ from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
-    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer, \
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, \
-    CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddMentorSerializer, \
-    MentorDetailSerializer, MentorCourseSerializer, AddStudentSerializer
+    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer,AddMentorSerializer,MentorDetailSerializer,MentorCourseSerializer,AddStudentSerializer
+
 import pandas
+from .utils import ExcelHeader, ValueRange, Pattern, Configure
+from .excel_validator import ExcelException, ExcelValidator
 import sys
 
 sys.path.append('..')
@@ -24,6 +25,7 @@ import random
 from Auth.models import User
 from Management.utils import GeneratePassword, GetFirstNameAndLastName
 import datetime
+from Auth.models import User
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -558,18 +560,59 @@ class StudentPerfromanceUpdate(GenericAPIView):
 @method_decorator(TokenAuthentication, name='dispatch')
 class UpdateScoreFromExcel(GenericAPIView):
     serializer_class = ExcelDataSerializer
-    permission_classes = [isAdmin]
+    permission_classes = [isMentorOrAdmin]
 
     def post(self, request):
         try:
             file = request.FILES.get('file')
             serializer = self.serializer_class(data={'file': file})
-            serializer.is_valid(raise_exception=True)
-            file = serializer.validated_data['file']
-            df = pandas.read_excel(file)
-            print(set(df.columns))
-            print(df)
-            return Response('res')
+            if serializer.is_valid():
+                file = serializer.validated_data['file']
+                df = pandas.read_excel(file)
+                role = request.META.get('user').role
+                ExcelValidator.validateExcel(df, role)                # Validating the excel file
+                error_message = {}
+                for row_no, row in enumerate(df.iterrows()):
+                    try:
+                        if request.META.get('user').role == Role.MENTOR.value:
+                            mentor_id = request.META.get('user').mentor.id
+                        else:
+                            mentor_id = Mentor.objects.get(mid=row[1][-2]).id
+                        data = Configure.get_configured_excel_data(row, mentor_id) # configuring excel data
+                        serializer = PerformanceUpdateViaExcelSerializer(data=data, context={'user':request.META.get('user')})
+                        if serializer.is_valid():
+                            student = serializer.validated_data['student']
+                            course = serializer.validated_data['course']
+                            mentor = serializer.validated_data['mentor']
+                            week_no = serializer.validated_data['week_no']
+                            map_obj = StudentCourseMentor.objects.get(student=student)
+                            duplicate_entry = False
+                            performance_list = Performance.objects.filter(student=student)
+                            for performance in performance_list:
+                            # checking duplicate entry
+                                if performance.student == student and performance.week_no == week_no and performance.course == course:
+                                    error_message[f"Row_no-{row_no+1}"] = 'Duplicate Entry found, Data is already saved'
+                                    duplicate_entry = True  
+                            if not duplicate_entry:
+                                    #checking student mentor course mapping
+                                if map_obj.course == course and map_obj.mentor == mentor and course in mentor.course.all():
+                                    serializer.save()
+                                else:
+                                    error_message[f"Row_no-{row_no+1}"] = 'course-mentor-student mapping does not exist'
+                            else:
+                                pass
+                        else:
+                            error_message[f"Row_no-{row_no+1}"] = serializer.errors
+                    except (Student.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist, Course.DoesNotExist) as e:
+                        error_message[f"Row_no-{row_no+1}"] = str(e)
+                if error_message:
+                    msg = 'Record Partially updated! ' + str(error_message)
+                else:
+                    msg = 'Record updated successfully'
+                return Response({"response":msg}, status=status.HTTP_200_OK)
+            return Response({'response':serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)    
+        except ExcelException as e:
+            return Response({'response':str(e)}, status=status.HTTP_400_BAD_REQUEST)  
         except Exception as e:
             return Response({'response': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

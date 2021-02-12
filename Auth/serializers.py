@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import User
 from .permissions import Role
 import sys
+
 sys.path.append("..")
 from Management.utils import Pattern
 
@@ -29,11 +30,16 @@ class UserSerializer(serializers.ModelSerializer):
         return data
 
 
-class UserLoginSerializer(serializers.Serializer):
+class UserLoginSerializer(serializers.ModelSerializer):
     """This Serializer is used to serializer user credential inputs
     """
     username = serializers.CharField(max_length=20, min_length=3, required=True)
     password = serializers.CharField(max_length=20, min_length=6, required=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'role']
+        extra_kwargs = {'role': {'read_only': True}}
 
 
 class ChangeUserPasswordSerializer(serializers.Serializer):
@@ -55,6 +61,7 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
     """This serializer is used to serialize forgot password input as well as new login link with token api's input.
        Input Field: email field
     """
+
     class Meta:
         model = User
         fields = ['email']

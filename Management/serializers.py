@@ -258,8 +258,6 @@ class CourseMentorSerializers(serializers.ModelSerializer):
         fields = [ 'mentor', 'course']
 
 class EducationSerializer1(serializers.ModelSerializer):
-
-
     class Meta:
         model = Education
         fields = [ 'degree', 'stream', 'percentage', 'from_date', 'till']
@@ -267,3 +265,13 @@ class EducationSerializer1(serializers.ModelSerializer):
     def validate(self, data):
         data['student_id'] = self.context['student']  # storing logged in student id and returning with data
         return data
+
+class MentorStudentCourseSerializer(serializers.Serializer):
+    mentor = serializers.StringRelatedField(read_only=True)
+    student = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+    week_no = serializers.StringRelatedField(read_only=True)
+    score = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Performance

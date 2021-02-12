@@ -564,6 +564,9 @@ class UpdateScoreFromExcel(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddStudent(GenericAPIView):
+    """
+        This API is used to Add new user student and mapp mentor, course to it
+    """
     serializer_class = AddStudentSerializer
     permission_classes = [isAdmin]
 

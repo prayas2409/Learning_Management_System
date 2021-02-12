@@ -12,7 +12,7 @@ from .serializers import CourseSerializer, CourseMentorSerializer, MentorSeriali
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, \
     CourseMentorSerializerDetails, \
     NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddMentorSerializer, \
-    MentorDetailSerializer, MentorCourseSerializer
+    MentorDetailSerializer, MentorCourseSerializer, AddStudentSerializer
 import pandas
 import sys
 
@@ -576,31 +576,35 @@ class UpdateScoreFromExcel(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddMentorAPIView(GenericAPIView):
+    """ This API is used for add mentor"""
     permission_classes = [isAdmin]
     serializer_class = MentorDetailSerializer
 
     def post(self, request):
+        """
+        This function is used for adding mentor with course
+        :param request: mentors details
+        :return: add mentor
+        """
         try:
             serializer = self.serializer_class(data=request.data)
             serializer.is_valid()
-            username = serializer.data['username']
-            first_name = serializer.data['first_name']
-            last_name = serializer.data['last_name']
-            email = serializer.data['email']
-            password = serializer.data['password']
-            mobile = serializer.data['mobile']
-            user = User.objects.create(username=username, first_name=first_name, last_name=last_name, email=email,password=password,mobile=mobile, role='Mentor')
-            user.save()
+            name = serializer.validated_data['name']
+            email = serializer.validated_data['email']
+            mobile = serializer.validated_data['mobile']
+            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            last_name = GetFirstNameAndLastName.get_last_name(name)
+            password = GeneratePassword.generate_password(self)
+            user = User.objects.create(username=email, first_name=first_name, last_name=last_name, email=email,
+                                       password=password, mobile=mobile, role='Mentor')
             mentor = Mentor.objects.get(mentor=user)
-            course_list = []
             courses = serializer.data['mentor'].get('course')
             for course_id in courses:
-                for mentor_course in course_list:
+                for mentor_course in mentor.course.all():
                     if course_id == mentor_course.id:
                         log.info('duplicate entry found')
                         return Response({'response': 'This course is already added'},
-                                            status=status.HTTP_400_BAD_REQUEST)
-                course_list.append(course_id)
+                                        status=status.HTTP_400_BAD_REQUEST)
                 mentor.course.add(course_id)
                 mentor.save()
             log.info('New Mentor is added')
@@ -609,19 +613,30 @@ class AddMentorAPIView(GenericAPIView):
             log.error(e)
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @method_decorator(TokenAuthentication, name='dispatch')
 class GetMentorDetailsAPIView(GenericAPIView):
+    """ This API used for fetching mentor details"""
     serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
     queryset = Mentor.objects.all()
 
     def get(self, request):
-        serializer = self.serializer_class(self.queryset.all(), many=True)
-        if len(serializer.data) == 0:
-            log.info("Mentors list empty")
-            return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info("Mentors retrieved")
-        return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        """
+        This function is used for fetching mentor details
+        :return: mentor details
+        """
+        try:
+            serializer = self.serializer_class(self.queryset.all(), many=True)
+            if len(serializer.data) == 0:
+                log.info("Mentors list empty")
+                return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
+            log.info("Mentors retrieved")
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            log.error(e)
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_403_FORBIDDEN)
+
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddStudent(GenericAPIView):
@@ -645,15 +660,17 @@ class AddStudent(GenericAPIView):
                 if course in mentor.course.all():
                     user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name,
                                                     email=email, mobile=mobile, role='Engineer', password=password)
-                    StudentCourseMentor.objects.create(student=Student.objects.get(student=user), 
-                                                    course=course, 
-                                                    mentor=Mentor.objects.get(mentor=User.objects.get(mentor=mentor)))
+                    StudentCourseMentor.objects.create(student=Student.objects.get(student=user),
+                                                       course=course,
+                                                       mentor=Mentor.objects.get(
+                                                           mentor=User.objects.get(mentor=mentor)))
                     log.info("Student is created succesfully")
-                    return Response({'response':"Student is created succesfully"}, status=status.HTTP_201_CREATED)
+                    return Response({'response': "Student is created succesfully"}, status=status.HTTP_201_CREATED)
                 log.error('This course is not assigned to the mentor.')
-                return Response({'response':f'{course.course_name} is not assigned to the mentor.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'response': f'{course.course_name} is not assigned to the mentor.'},
+                                status=status.HTTP_400_BAD_REQUEST)
             log.error('Please provide the course and mentor details.')
-            return Response({'response':'Please provide the course and mentor details.'})
+            return Response({'response': 'Please provide the course and mentor details.'})
         except Exception as e:
             log.error(e)
-            return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'response': 'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)

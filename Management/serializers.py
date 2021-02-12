@@ -213,3 +213,12 @@ class MentorCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mentor
         fields = ['mid', 'mentor', 'course']
+        return data 
+
+
+class AddStudentSerializer(serializers.ModelSerializer):
+    student = StudentCourseMentorUpdateSerializer(required=False)
+    name = serializers.CharField(max_length=50, required=False)
+    class Meta:
+        model = User
+        fields = ['name', 'email', 'mobile', 'student']

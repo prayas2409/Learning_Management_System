@@ -35,6 +35,12 @@ class UserLoginSerializer(serializers.ModelSerializer):
     """
     username = serializers.CharField(max_length=20, min_length=3, required=True)
     password = serializers.CharField(max_length=20, min_length=6, required=True)
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+        extra_kwargs = {'role':{'read_only':True}}
+
+
 
     class Meta:
         model = User

@@ -49,7 +49,7 @@ class Course(models.Model):
 
 class Mentor(models.Model):
     mentor = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='mentor',max_length=255, null=True, blank=True)
+    image = models.ImageField(upload_to='mentor/',max_length=255, null=True, blank=True)
     mid = models.CharField(max_length=10, unique=True, default=get_mentor_id)
     course = models.ManyToManyField(to=Course, related_name='course_mentor')
 
@@ -67,7 +67,7 @@ class Student(models.Model):
         (5, 5),
     )
     student = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='student',max_length=255, null=True, blank=True)
+    image = models.ImageField(upload_to='student/',max_length=255, null=True, blank=True)
     sid = models.CharField(max_length=10, unique=True, default=get_student_id)
     alt_number = models.CharField(max_length=13, default=None, null=True, blank=True)
     relation_with_alt_number_holder = models.CharField(max_length=20, default=None, null=True, blank=True)

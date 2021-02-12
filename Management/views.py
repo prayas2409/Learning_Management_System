@@ -568,27 +568,31 @@ class AddStudent(GenericAPIView):
     permission_classes = [isAdmin]
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data, context={'user': request.META['user']})
-        serializer.is_valid(raise_exception=True)
-        name = serializer.validated_data['name']
-        email = serializer.validated_data['email']
-        mobile = serializer.validated_data['mobile']
-        first_name = GetFirstNameAndLastName.get_first_anme(name)
-        last_name = GetFirstNameAndLastName.get_last_name(name)
-        password = GeneratePassword.generate_password(self)
-        student = serializer.validated_data['student']
-        course = student['course']
-        mentor = student['mentor']
-        if mentor and course:
-            if course in mentor.course.all():
-                user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name,
-                                                email=email, mobile=mobile, role='Engineer', password=password)
-                StudentCourseMentor.objects.create(student=Student.objects.get(student=user), 
-                                                course=course, 
-                                                mentor=Mentor.objects.get(mentor=User.objects.get(mentor=mentor)))
-                log.info("Student is created succesfully")
-                return Response({'response':"Student is created succesfully"}, status=status.HTTP_201_CREATED)
-            log.error('This course is not assigned to the mentor.')
-            return Response({'response':f'{course.course_name} is not assigned to the mentor.'}, status=status.HTTP_400_BAD_REQUEST)
-        log.error('Please provide the course and mentor details.')
-        return Response({'response':'Please provide the course and mentor details.'})
+        try:
+            serializer = self.serializer_class(data=request.data, context={'user': request.META['user']})
+            serializer.is_valid(raise_exception=True)
+            name = serializer.validated_data['name']
+            email = serializer.validated_data['email']
+            mobile = serializer.validated_data['mobile']
+            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            last_name = GetFirstNameAndLastName.get_last_name(name)
+            password = GeneratePassword.generate_password(self)
+            student = serializer.validated_data['student']
+            course = student['course']
+            mentor = student['mentor']
+            if mentor and course:
+                if course in mentor.course.all():
+                    user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name,
+                                                    email=email, mobile=mobile, role='Engineer', password=password)
+                    StudentCourseMentor.objects.create(student=Student.objects.get(student=user), 
+                                                    course=course, 
+                                                    mentor=Mentor.objects.get(mentor=User.objects.get(mentor=mentor)))
+                    log.info("Student is created succesfully")
+                    return Response({'response':"Student is created succesfully"}, status=status.HTTP_201_CREATED)
+                log.error('This course is not assigned to the mentor.')
+                return Response({'response':f'{course.course_name} is not assigned to the mentor.'}, status=status.HTTP_400_BAD_REQUEST)
+            log.error('Please provide the course and mentor details.')
+            return Response({'response':'Please provide the course and mentor details.'})
+        except Exception as e:
+            log.error(e)
+            return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)

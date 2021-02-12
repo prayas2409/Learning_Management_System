@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from rest_framework import authentication, status
+from rest_framework import authentication, status, generics, viewsets
 from rest_framework.response import Response
 
 from Auth.models import User
@@ -10,8 +10,9 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer,AddMentorSerializer,MentorDetailSerializer,MentorCourseSerializer,AddStudentSerializer
-
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer, \
+    AddMentorSerializer,MentorDetailSerializer,MentorCourseSerializer,AddStudentSerializer, \
+        StudentProfileDetails, User, CourseMentorSerializers, EducationSerializer1
 import pandas
 from .utils import ExcelHeader, ValueRange, Pattern, Configure
 from .excel_validator import ExcelException, ExcelValidator
@@ -717,3 +718,43 @@ class AddStudent(GenericAPIView):
         except Exception as e:
             log.error(e)
             return Response({'response': 'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class Studentprofile(GenericAPIView):
+    serializer_class = StudentProfileDetails
+    permission_classes = [AllowAny]
+    queryset = Student.objects.all()
+
+    def get(self, request, student_id):
+
+        try:
+            if request.META['user']:
+                student = Student.objects.get(student_id=request.META['user'])
+
+            else:
+                student = self.queryset.get(id=student_id)
+            serializer = dict(self.serializer_class(student).data)
+            userSerializer = User(student.student).data
+            serializer.update({'USER_DATA':userSerializer})
+
+            EducationDetails = EducationSerializer1(student.student).data
+            serializer.update({'Education_Details': EducationDetails})
+
+            try:
+                student = StudentCourseMentor.objects.get(student_id=student.id)
+                studentCourseSerializer = CourseMentorSerializers(student).data
+                serializer.update({'Mentor&Course':studentCourseSerializer})
+            except StudentCourseMentor.DoesNotExist:
+                pass
+
+
+
+            log.info(f"Data accessed by {request.META['user'].role}")
+            return Response({'response': serializer}, status=status.HTTP_200_OK)
+        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
+            log.info('Record not found')
+            return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+

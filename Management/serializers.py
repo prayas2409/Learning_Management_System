@@ -4,6 +4,7 @@ import sys
 import re
 from .utils import Pattern
 
+
 sys.path.append('..')
 from Auth.models import User
 
@@ -231,4 +232,38 @@ class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         data['update_by'] = self.context['user']
+        return data
+
+
+
+
+class StudentProfileDetails(serializers.ModelSerializer):
+    student = serializers.StringRelatedField(read_only=True)
+    class Meta:
+        model=Student
+        fields = ['student','sid','image','alt_number','relation_with_alt_number_holder','git_link','year_of_experience','current_location','current_address']
+
+
+class User(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'mobile']
+
+class CourseMentorSerializers(serializers.ModelSerializer):
+    mentor = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = StudentCourseMentor
+        fields = [ 'mentor', 'course']
+
+class EducationSerializer1(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = Education
+        fields = [ 'degree', 'stream', 'percentage', 'from_date', 'till']
+
+    def validate(self, data):
+        data['student_id'] = self.context['student']  # storing logged in student id and returning with data
         return data

@@ -30,5 +30,6 @@ urlpatterns = [
     path('mentor/', views.AddMentorAPIView.as_view(), name='mentor'),
     path('mentordetails/', views.GetMentorDetailsAPIView.as_view(), name='mentordetails'),
     path('add-student/', views.AddStudent.as_view(), name='add-student'),
+    path('students/profile/<int:student_id>/',views.Studentprofile.as_view(),name='student-profile'),
 ]
 

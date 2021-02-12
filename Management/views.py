@@ -8,13 +8,17 @@ from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddStudentSerializer,MentorStudentCourseSerializer
 import pandas
 import sys
 sys.path.append('..')
 from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent, Role
 from Auth.middlewares import TokenAuthentication
 from LMS.loggerConfig import log
+import random
+from Auth.models import User
+from Management.utils import GeneratePassword, GetFirstNameAndLastName
+import datetime
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -558,3 +562,68 @@ class UpdateScoreFromExcel(GenericAPIView):
             return Response({'response':str(e) }, status=status.HTTP_400_BAD_REQUEST)
 
     
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class AddStudent(GenericAPIView):
+    """
+        This API is used to Add new user student and mapp mentor, course to it
+    """
+    serializer_class = AddStudentSerializer
+    permission_classes = [isAdmin]
+
+    def post(self, request):
+        try:
+            serializer = self.serializer_class(data=request.data, context={'user': request.META['user']})
+            serializer.is_valid(raise_exception=True)
+            name = serializer.validated_data['name']
+            email = serializer.validated_data['email']
+            mobile = serializer.validated_data['mobile']
+            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            last_name = GetFirstNameAndLastName.get_last_name(name)
+            password = GeneratePassword.generate_password(self)
+            student = serializer.validated_data['student']
+            course = student['course']
+            mentor = student['mentor']
+            if mentor and course:
+                if course in mentor.course.all():
+                    user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name,
+                                                    email=email, mobile=mobile, role='Engineer', password=password)
+                    StudentCourseMentor.objects.create(student=Student.objects.get(student=user), 
+                                                    course=course, 
+                                                    mentor=Mentor.objects.get(mentor=User.objects.get(mentor=mentor)))
+                    log.info("Student is created succesfully")
+                    return Response({'response':"Student is created succesfully"}, status=status.HTTP_201_CREATED)
+                log.error('This course is not assigned to the mentor.')
+                return Response({'response':f'{course.course_name} is not assigned to the mentor.'}, status=status.HTTP_400_BAD_REQUEST)
+            log.error('Please provide the course and mentor details.')
+            return Response({'response':'Please provide the course and mentor details.'})
+        except Exception as e:
+            log.error(e)
+            return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class MentorStudentCourse(GenericAPIView):
+    serializer_class = MentorStudentCourseSerializer
+    permission_classes = [isAdmin]
+    queryset = Performance.objects.all()
+
+    def get(self, request, mentor_id, course_id):
+        """
+            This API is used to get the list of students according to mentor_id and course_id
+            @param mentor_id: mentor primary key
+            @param course_id: course primary key
+            @return: List of Students
+        """
+        try:
+            query = self.queryset.filter(mentor_id=mentor_id, course_id=course_id)
+            serializer = self.serializer_class(query, many=True)
+            if not serializer.data:
+                log.error('serializer data is empty, from get_MentorStudentCourse()')
+                return Response({'response': 'Records not found, check mentor_id/Course_id..!!'}, status=status.HTTP_404_NOT_FOUND)
+            log.info("Fetched List of Students according to Mentor_id and Course_id, from get_MentorStudentCourse() ")
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            log.error("Something went wrong, from get_MentorStudentCourse()")
+            return Response("Something went wrong", status=status.HTTP_400_BAD_REQUEST)
+

@@ -20,6 +20,7 @@ sys.path.append('..')
 from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
 from Management.utils import GeneratePassword
+from LMS.cache import Cache
 import datetime
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -115,6 +116,7 @@ class UserLoginView(GenericAPIView):
                          'link': reverse('change-password-on-first-access',
                                          args=[token])}, status=status.HTTP_200_OK)
                     response['Authorization'] = JWTAuth.getToken(username=username, password=password)
+                    
                     return response
                 log.info('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
@@ -125,7 +127,12 @@ class UserLoginView(GenericAPIView):
             log.info('successful login')
             response = Response({'response': f'You are logged in successfully', 'username': username, 'role': role},
                                 status=status.HTTP_200_OK)
-            response['Authorization'] = JWTAuth.getToken(username=username, password=password)
+            jwt_token = JWTAuth.getToken(username=username, password=password)
+            response['Authorization'] = jwt_token
+            # token is storing in redis cache
+            cache = Cache.getCacheInstance()
+            cache.hmset(username, {'auth': jwt_token})
+            cache.expire(username, time=datetime.timedelta(days=2))
             return response
         log.info('bad credential found')
         return Response({'response': 'Bad credential found'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -136,11 +143,12 @@ class UserLogoutView(GenericAPIView):
     def get(self, request):
         """This API is used to log user out and to clear the user session
         """
-        # if request.session.get(request.META['user'].username):
-        #     request.session.pop(request.META['user'].username)
-        # logout(request)
+        cache = Cache.getCacheInstance()
+        user = request.META.get('user')
+        if user:
+            cache.delete(user.username)     # deleting redis cache
         log.info('logout successful')
-        return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'response': 'You are logged out'}, status=status.HTTP_200_OK)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')

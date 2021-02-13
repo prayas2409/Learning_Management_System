@@ -609,13 +609,17 @@ class UpdateScoreFromExcel(GenericAPIView):
                         error_message[f"Row_no-{row_no+1}"] = str(e)
                 if error_message:
                     msg = 'Record Partially updated! ' + str(error_message)
+                    log.error(str(error_message))
                 else:
                     msg = 'Record updated successfully'
                 return Response({"response":msg}, status=status.HTTP_200_OK)
+            log.error(serializer.errors)
             return Response({'response':serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)    
         except ExcelException as e:
+            log.error(str(e))
             return Response({'response':str(e)}, status=status.HTTP_400_BAD_REQUEST)  
         except Exception as e:
+            log.error(str(e))
             return Response({'response': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 

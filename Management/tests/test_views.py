@@ -28,17 +28,6 @@ class ManagementAPITest(TestCase):
                                                email='mentor@gmail.com', password='bharti',
                                                last_login=str(datetime.datetime.now()))
 
-        
-        self.student_1 = User.objects.create_user(username='student_1', first_name='Tom', last_name='Boris',
-                                                role='Engineer', email='student_1@gmail.com', password='student_1',
-                                                last_login=str(datetime.datetime.now()))
-        
-        self.student_2 = User.objects.create_user(username='student_2', first_name='Charls', last_name='Christ',
-                                                role='Engineer', email='student_2@gmail.com', password='student_2',
-                                                last_login=str(datetime.datetime.now()))
-
-        
-
         # Create course model object
         self.course1 = Course.objects.create(course_name='Python')
         self.course2 = Course.objects.create(course_name='Java')

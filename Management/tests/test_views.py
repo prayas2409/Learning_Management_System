@@ -28,6 +28,17 @@ class ManagementAPITest(TestCase):
                                                email='mentor@gmail.com', password='bharti',
                                                last_login=str(datetime.datetime.now()))
 
+        
+        self.student_1 = User.objects.create_user(username='student_1', first_name='Tom', last_name='Boris',
+                                                role='Engineer', email='student_1@gmail.com', password='student_1',
+                                                last_login=str(datetime.datetime.now()))
+        
+        self.student_2 = User.objects.create_user(username='student_2', first_name='Charls', last_name='Christ',
+                                                role='Engineer', email='student_2@gmail.com', password='student_2',
+                                                last_login=str(datetime.datetime.now()))
+
+        
+
         # Create course model object
         self.course1 = Course.objects.create(course_name='Python')
         self.course2 = Course.objects.create(course_name='Java')
@@ -110,37 +121,37 @@ class ManagementAPITest(TestCase):
         return auth_headers
 
     def test_add_student_with_valid_payload_without_login(self):
-        response = self.client.post(reverse('add-student'), data=json.dumps(self.valid_add_student_payload),
+        response = self.client.post(reverse('student'), data=json.dumps(self.valid_add_student_payload),
                                     content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_add_student_with_valid_payload_after_login_by_invalid_credentials(self):
         self.client.post(reverse('login'), data=json.dumps(self.invalid_login_payload), content_type=CONTENT_TYPE)
-        response = self.client.post(reverse('add-student'), data=json.dumps(self.valid_add_student_payload),
+        response = self.client.post(reverse('student'), data=json.dumps(self.valid_add_student_payload),
                                     content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_add_student_with_valid_payload_after_login_by_admin_credentials(self):
         auth_headers = self.login_method(self.admin_login_payload)
-        response = self.client.post(reverse('add-student'), **auth_headers,
+        response = self.client.post(reverse('student'), **auth_headers,
                                     data=json.dumps(self.valid_add_student_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_add_student_with_invalid_payload_after_login_by_admin_credentials(self):
         auth_headers = self.login_method(self.admin_login_payload)
-        response = self.client.post(reverse('add-student'), **auth_headers,
+        response = self.client.post(reverse('student'), **auth_headers,
                                     data=json.dumps(self.invalid_add_student_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_add_student_with_valid_payload_after_login_by_mentor_credentials(self):
         auth_headers = self.login_method(self.mentor_login_payload)
-        response = self.client.post(reverse('add-student'), **auth_headers,
+        response = self.client.post(reverse('student'), **auth_headers,
                                     data=json.dumps(self.valid_add_student_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_add_student_with_valid_payload_after_login_by_student_credentials(self):
         auth_headers = self.login_method(self.student_login_payload)
-        response = self.client.post(reverse('add-student'), **auth_headers,
+        response = self.client.post(reverse('student'), **auth_headers,
                                     data=json.dumps(self.valid_add_student_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

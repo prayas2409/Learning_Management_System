@@ -31,7 +31,7 @@ def create_performace_record(sender, instance, created, **kwargs):
 
 @receiver(signal=post_save, sender=Performance)
 def notify_student_about_review_result(sender, instance, created, **kwargs):
-    if not created:
+    if created:
         data = {
             'name': instance.student.student.get_full_name(),
             'email': instance.student.student.email,

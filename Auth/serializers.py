@@ -33,8 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.ModelSerializer):
     """This Serializer is used to serializer user credential inputs
     """
-    username = serializers.CharField(max_length=20, min_length=3, required=True)
-    password = serializers.CharField(max_length=20, min_length=6, required=True)
+    username = serializers.CharField(max_length=50, min_length=3, required=True)
+    password = serializers.CharField(max_length=50, min_length=6, required=True)
     class Meta:
         model = User
         fields = ['username', 'password']
@@ -44,9 +44,9 @@ class UserLoginSerializer(serializers.ModelSerializer):
 class ChangeUserPasswordSerializer(serializers.Serializer):
     """This serializer is used to serialize change password credential inputs"""
 
-    old_password = serializers.CharField(max_length=20, min_length=6)
-    new_password = serializers.CharField(max_length=20, min_length=6)
-    confirm_password = serializers.CharField(max_length=20, min_length=6)
+    old_password = serializers.CharField(max_length=50, min_length=6)
+    new_password = serializers.CharField(max_length=50, min_length=6)
+    confirm_password = serializers.CharField(max_length=50, min_length=6)
 
     def validate(self, data):
         """If new password and confirm password are not matching then raising an exception"""
@@ -70,8 +70,8 @@ class ResetPasswordSerializer(serializers.Serializer):
     """This serializer is used to serialize reset password API's inputs as well as Change Password on First Access API's
     inputs.
     """
-    new_password = serializers.CharField(min_length=6, max_length=20, required=True)
-    confirm_password = serializers.CharField(min_length=6, max_length=20, required=True)
+    new_password = serializers.CharField(min_length=6, max_length=50, required=True)
+    confirm_password = serializers.CharField(min_length=6, max_length=50, required=True)
 
     def validate(self, data):
         if data.get('new_password') != data.get('confirm_password'):

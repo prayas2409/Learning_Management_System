@@ -6,9 +6,11 @@ from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
-    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddStudentSerializer,MentorStudentCourseSerializer
+    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer, \
+    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, \
+    CourseMentorSerializerDetails, \
+    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, AddStudentSerializer, \
+    MentorStudentCourseSerializer, MentorProfileSerializer
 import pandas
 import sys
 sys.path.append('..')
@@ -624,6 +626,24 @@ class MentorStudentCourse(GenericAPIView):
             log.info("Fetched List of Students according to Mentor_id and Course_id, from get_MentorStudentCourse() ")
             return Response({'response': serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            log.error("Something went wrong, from get_MentorStudentCourse()")
+            log.error(e, "from get_MentorStudentCourse()")
             return Response("Something went wrong", status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(TokenAuthentication, name='dispatch')
+class MentorProfileDetail(GenericAPIView):
+    serializer_class = MentorProfileSerializer
+    permission_classes = [isMentorOrAdmin]
+    queryset = Mentor.objects.all()
+
+    def get(self, request):
+        try:
+            query = self.queryset.get(mentor_id=request.META['user'])
+            print(query)
+            serializer = self.serializer_class(query)
+            if not serializer.data:
+                return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
 

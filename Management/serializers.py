@@ -196,6 +196,7 @@ class ExcelDataSerializer(serializers.Serializer):
 class AddStudentSerializer(serializers.ModelSerializer):
     student = StudentCourseMentorUpdateSerializer(required=False)
     name = serializers.CharField(max_length=50, required=False)
+
     class Meta:
         model = User
         fields = ['name', 'email', 'mobile', 'student']
@@ -210,3 +211,14 @@ class MentorStudentCourseSerializer(serializers.Serializer):
 
     class Meta:
         model = Performance
+
+
+class MentorProfileSerializer(serializers.ModelSerializer):
+    mentor = serializers.StringRelatedField(read_only=True)
+    mid = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+    cid = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Mentor
+        fields = ['mentor', 'mid', 'course', 'cid']

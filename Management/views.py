@@ -7,7 +7,7 @@ from .models import Course, Mentor, StudentCourseMentor, Student, Education, Per
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
-from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
+from .serializers import CourseSerializer, CourseMentorSerializer, UserSerializer,\
     StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
     NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer, \
@@ -158,29 +158,14 @@ class DeleteCourseFromMentorListAPIView(GenericAPIView):
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
-class AllMentorDetailsAPIView(GenericAPIView):
-    serializer_class = MentorSerializer
-    permission_classes = [isAdmin]
-    queryset = Mentor.objects.all()
-
-    def get(self, request):
-        serializer = self.serializer_class(self.queryset.all(), many=True)
-        if len(serializer.data) == 0:
-            log.info("Mentors list empty")
-            return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info("Mentors retrieved")
-        return Response({'response': serializer.data}, status=status.HTTP_200_OK)
-
-
-@method_decorator(TokenAuthentication, name='dispatch')
 class MentorDetailsAPIView(GenericAPIView):
-    serializer_class = MentorSerializer
+    serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
 
     def get(self, request, mentor_id):
         try:
-            mentor = Mentor.objects.get(id=mentor_id)
-            mentorSerializerDict = dict(MentorSerializer(mentor).data)
+            mentor = Mentor.objects.get(mentor_id=mentor_id)
+            mentorSerializerDict = dict(MentorCourseSerializer(mentor).data)
             userSerializer = UserSerializer(mentor.mentor)
             mentorSerializerDict.update(userSerializer.data)
             return Response({'response': mentorSerializerDict}, status=status.HTTP_200_OK)
@@ -268,7 +253,7 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class GetMentorsForSpecificCourse(GenericAPIView):
-    serializer_class = MentorSerializer
+    serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
 
     def get(self, request, course_id):
@@ -667,8 +652,7 @@ class AddMentorAPIView(GenericAPIView):
 class GetMentorDetailsAPIView(GenericAPIView):
     """ This API used for fetching mentor details"""
     serializer_class = MentorCourseSerializer
-    permission_classes = [isAdmin]
-    queryset = Mentor.objects.all()
+    permission_classes = [isMentorOrAdmin]
 
     def get(self, request):
         """
@@ -676,17 +660,26 @@ class GetMentorDetailsAPIView(GenericAPIView):
         :return: mentor details
         """
         try:
-            serializer = self.serializer_class(self.queryset.all(), many=True)
-            if len(serializer.data) == 0:
-                log.info("Mentors list empty")
-                return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-            log.info("Mentors retrieved")
-            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+            if request.META['user'].role == Role.ADMIN.value:
+                serializer = self.serializer_class(Mentor.objects.all(), many=True)
+                if len(serializer.data) == 0:
+                    log.info("Mentors list empty")
+                    return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
+                log.info("Mentors retrieved")
+                return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+            elif request.META['user'].role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor=request.META['user'])
+                serializer = dict(self.serializer_class(mentor).data)
+                courses = mentor.course.all()
+                for course in courses:
+                    student = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor=request.META['user']), course=course).count()
+                    serializer.update({str(course):student})
+                log.info("Mentor details retrieved")
+                return Response({'response': serializer}, status=status.HTTP_200_OK)
         except Exception as e:
             log.error(e)
             return Response({'response': 'Something went wrong'}, status=status.HTTP_403_FORBIDDEN)
 
-    
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddStudent(GenericAPIView):

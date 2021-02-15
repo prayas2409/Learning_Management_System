@@ -3,17 +3,26 @@ from rest_framework import status
 from django.http import JsonResponse
 from django.urls import reverse
 from .models import User
-
+import sys
+sys.path.append('..')
+from LMS.cache import Cache
 
 class TokenAuthentication(object):
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request, *args, **kwargs):
-        jwtData = JWTAuth.verifyToken(request.headers.get('Authorization'))
-        if request.resolver_match.url_name == 'logout':
-            return self.get_response(request, *args, **kwargs)
-        if jwtData:
+        token = request.headers.get('Authorization')
+        jwtData = JWTAuth.verifyToken(token)
+        cache = Cache.getCacheInstance()
+        cache_token = None
+        try:
+            cache_token = cache.hget(jwtData.get('username'), 'auth')
+        except Exception:
+            pass
+        if cache_token:
+            cache_token = cache_token.decode('utf-8')
+        if jwtData and cache_token == token:
             user = User.objects.get(username=jwtData.get('username'))
             request.META['user'] = user
             if not user.last_login == None or user.is_superuser:

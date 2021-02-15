@@ -1,14 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.timezone import now
-
+from .permissions import Role
 
 class User(AbstractUser):
     """This is the base user model which is build extending the AbstractUser models functionalities.
     All the bassic fields like username, first_name, last_name, email, password etc are extended in this model"""
 
     def get_roles():
-        roles = ['MENTOR','ENGINEER', 'STUDENT']
+        roles = [Role.ADMIN.value, Role.MENTOR.value, Role.STUDENT.value]
         return ((role, role) for role in roles)      
 
     mobile = models.CharField(max_length=13)

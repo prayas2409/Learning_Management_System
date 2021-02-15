@@ -1,6 +1,6 @@
 from django.db import models
 import sys
-from .utils import Degree
+from .utils import Degree, Default
 
 sys.path.append('..')
 from Auth.models import User
@@ -13,7 +13,7 @@ def get_course_id():
         int_part = int(int_part)
         int_part += 1
         return str_part + '-' + str(int_part)
-    return "CI-1000"
+    return Default.CID.value
 
 
 def get_student_id():
@@ -23,7 +23,7 @@ def get_student_id():
         int_part = int(int_part)
         int_part += 1
         return str_part + '-' + str(int_part)
-    return "SID-1000"
+    return Default.SID.value
 
 
 def get_mentor_id():
@@ -33,7 +33,7 @@ def get_mentor_id():
         int_part = int(int_part)
         int_part += 1
         return str_part + '-' + str(int_part)
-    return "MID-1000"
+    return Default.MID.value
 
 
 class Course(models.Model):

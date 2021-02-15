@@ -28,6 +28,9 @@ urlpatterns = [
           name='performance-update'),
     
     path('students/performance/update-file', views.UpdateScoreFromExcel.as_view(), name='update-file'),
+    path('mentor/', views.AddMentorAPIView.as_view(), name='mentor'),
+    path('mentordetails/', views.GetMentorDetailsAPIView.as_view(), name='mentordetails'),
+    path('students/profile/<int:student_id>/',views.Studentprofile.as_view(),name='student-profile'),
     path('student/', views.AddStudent.as_view(), name='student'),
     path('mentor-student-course/<int:mentor_id>/<int:course_id>/', views.MentorStudentCourse.as_view(), name='mentor-student-course'),
     path('mentor-profile/', views.MentorProfileDetail.as_view(), name='mentor-profile'),

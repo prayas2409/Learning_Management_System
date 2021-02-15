@@ -28,6 +28,9 @@ from Management.utils import GeneratePassword, GetFirstNameAndLastName
 import datetime
 from Auth.models import User
 from Management.serializers import CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer, StudentProfileDetails
+from django.contrib.sites.shortcuts import get_current_site
+from Auth.JWTAuthentication import JWTAuth
+from Auth.tasks import send_registration_mail
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -648,6 +651,16 @@ class AddMentorAPIView(GenericAPIView):
                                        password=password, mobile=mobile, role='Mentor')
             mentor = Mentor.objects.get(mentor=user)
             courses = serializer.data['mentor'].get('course')
+            data = {
+                    'name': user.get_full_name(),
+                    'username': user.username,
+                    'password': password,
+                    'role': user.role,
+                    'email': user.email,
+                    'site': get_current_site(request).domain,
+                    'token': JWTAuth.getToken(username=user.username, password=user.password)
+                }
+            send_registration_mail.delay(data)
             for course_id in courses:
                 for mentor_course in mentor.course.all():
                     if course_id == mentor_course.id:
@@ -717,6 +730,18 @@ class AddStudent(GenericAPIView):
                                                        course=course,
                                                        mentor=Mentor.objects.get(
                                                            mentor=User.objects.get(mentor=mentor)))
+                    
+                    data = {
+                        'name': user.get_full_name(),
+                        'username': user.username,
+                        'password': password,
+                        'role': user.role,
+                        'email': user.email,
+                        'site': get_current_site(request).domain,
+                        'token': JWTAuth.getToken(username=user.username, password=user.password)
+                    }
+                    send_registration_mail.delay(data)
+
                     log.info("Student is created succesfully")
                     return Response({'response': "Student is created succesfully"}, status=status.HTTP_201_CREATED)
                 log.error('This course is not assigned to the mentor.')

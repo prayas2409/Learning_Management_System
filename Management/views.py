@@ -520,7 +520,7 @@ class StudentPerformance(GenericAPIView):
         if not serializer.data:
             log.info('Records not found')
             return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info('Records retrieved by ' + {request.META['user'].role})
+        log.info('Records retrieved by ' + request.META['user'].role)
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
@@ -530,7 +530,7 @@ class StudentPerfromanceUpdate(GenericAPIView):
     permission_classes = [isMentorOrAdmin]
     queryset = Performance.objects.all()
 
-    def put(self, request, student_id, week_no):
+    def patch(self, request, student_id, week_no):
         """This API is used to update student's weekly performance either by mentor or admin
         @param request: score, review_date
         @param student_id: student primary key
@@ -546,20 +546,20 @@ class StudentPerfromanceUpdate(GenericAPIView):
 
             serializer = self.serializer_class(instance=student, data=request.data,
                                                context={'user': request.META['user']})
-            serializer.is_valid(raise_exception=True)
-            if week_no > 1:
-                previous_record = self.queryset.get(student_id=student_id, week_no=week_no - 1).score
-                if not previous_record:
-                    log.info('Need to update previous weeks first')
-                    return Response({'response': f'Need to update previous weeks first'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-            serializer.save()
-        except (Performance.DoesNotExist, Student.DoesNotExist, Mentor.DoesNotExist):
-            log.info('Records not found')
-            return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
             {'response': f"Score updated for {student.student.student.get_full_name()}'s week {week_no} review"},
             status=status.HTTP_200_OK)
+            log.error(serializer.errors)
+            return Response({'response': serializer.errors})
+        except (Performance.DoesNotExist, Student.DoesNotExist, Mentor.DoesNotExist) as e:
+            log.error(e)
+            return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            log.error(e)
+            return Response({'response':'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
 
 @method_decorator(TokenAuthentication, name='dispatch')

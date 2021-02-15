@@ -672,7 +672,7 @@ class GetMentorDetailsAPIView(GenericAPIView):
                 serializer = dict(self.serializer_class(mentor).data)
                 courses = mentor.course.all()
                 for course in courses:
-                    student = StudentCourseMentor.objects.filter(mentor=Mentor.objects.get(mentor=request.META['user']), course=course).count()
+                    student = StudentCourseMentor.objects.filter(mentor=mentor, course=course).count()
                     serializer.update({str(course):student})
                 log.info("Mentor details retrieved")
                 return Response({'response': serializer}, status=status.HTTP_200_OK)

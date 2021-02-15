@@ -13,9 +13,7 @@ class isAdmin(permissions.BasePermission):
     message = {'response': 'You are not an admin. Access Denied!'}
 
     def has_permission(self, request, view):
-        if request.META['user'].role == Role.ADMIN.value:
-            return True
-        return False
+        return request.META['user'].role == Role.ADMIN.value or request.META['user'].is_superuser
 
 
 class isMentorOrAdmin(permissions.BasePermission):

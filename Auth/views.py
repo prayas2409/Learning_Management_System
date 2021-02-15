@@ -15,9 +15,15 @@ import random
 from django.urls import reverse
 from .tasks import send_registration_mail, send_password_reset_mail
 import sys
+
 sys.path.append('..')
 from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
+from Management.utils import GeneratePassword
+from LMS.cache import Cache
+import datetime
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -45,7 +51,7 @@ class UserRegistrationView(GenericAPIView):
         email = serializer.data.get('email')
         mobile = serializer.data.get('mobile')
         role = serializer.data.get('role')
-        password = str(random.randint(100000, 999999))
+        password = GeneratePassword.generate_password(self)
         user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name,
                                         email=email, mobile=mobile, role=role, password=password)
         data = {
@@ -59,13 +65,16 @@ class UserRegistrationView(GenericAPIView):
         }
         send_registration_mail.delay(data)
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
-        return Response({'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
-                         'token': data['token']}, status=status.HTTP_201_CREATED)
+        return Response(
+            {'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
+             'token': data['token']}, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
+    token_param_config = openapi.Parameter('token', in_=openapi.IN_QUERY, description='Description',
+                                           type=openapi.TYPE_STRING)
 
     def get(self, request, token=None):
         """This API is used to inform the client that its a genuine login request and it can serve the login interface
@@ -84,6 +93,7 @@ class UserLoginView(GenericAPIView):
             log.info('Valid login page request')
             return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
 
+    @swagger_auto_schema(manual_parameters=[token_param_config])
     def post(self, request, token=None):
         """This API is used to log user in
         @param request: basic credential
@@ -95,19 +105,34 @@ class UserLoginView(GenericAPIView):
         password = serializer.data.get('password')
         user = authenticate(request, username=username, password=password)
         if user:
-            if user.is_first_time_login and user.is_superuser == False:
+            role = user.role
+            if user.last_login == None and user.is_superuser == False:
                 token = request.GET.get('token')
                 if JWTAuth.verifyToken(token):
                     log.info('login successful but need to change password')
-                    return Response({'response': 'You are logged in! Now you need to change password to access resources',
-                                    'link': reverse('change-password-on-first-access',
-                                                                                args=[token])}, status=status.HTTP_200_OK)
+                    response = Response(
+                        {'response': 'You are logged in! Now you need to change password to access resources',
+                         'role': role,
+                         'link': reverse('change-password-on-first-access',
+                                         args=[token])}, status=status.HTTP_200_OK)
+                    response['Authorization'] = JWTAuth.getToken(username=username, password=password)
+                    
+                    return response
                 log.info('Need to use the link shared in mail')
                 return Response({'response': 'You need to use the link shared in your mail for the first time'},
                                 status=status.HTTP_401_UNAUTHORIZED)
+
+            user.last_login = str(datetime.datetime.now())
+            user.save()
             log.info('successful login')
-            response = Response({'response': 'You are logged in'}, status=status.HTTP_200_OK)
-            response['Authorization'] = JWTAuth.getToken(username=username, password=password)
+            response = Response({'response': f'You are logged in successfully', 'username': username, 'role': role},
+                                status=status.HTTP_200_OK)
+            jwt_token = JWTAuth.getToken(username=username, password=password)
+            response['Authorization'] = jwt_token
+            # token is storing in redis cache
+            cache = Cache.getCacheInstance()
+            cache.hmset(username, {'auth': jwt_token})
+            cache.expire(username, time=datetime.timedelta(days=2))
             return response
         log.info('bad credential found')
         return Response({'response': 'Bad credential found'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -118,11 +143,12 @@ class UserLogoutView(GenericAPIView):
     def get(self, request):
         """This API is used to log user out and to clear the user session
         """
-        # if request.session.get(request.META['user'].username):
-        #     request.session.pop(request.META['user'].username)
-        # logout(request)
+        cache = Cache.getCacheInstance()
+        user = request.META.get('user')
+        if user:
+            cache.delete(user.username)     # deleting redis cache
         log.info('logout successful')
-        return Response({'response': 'You are logged out'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'response': 'You are logged out'}, status=status.HTTP_200_OK)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -268,12 +294,12 @@ class ChangePasswordOnFirstAccess(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         if JWTAuth.verifyToken(token):
             request.META['user'].set_password(raw_password=serializer.data.get('new_password'))
-            request.META['user'].is_first_time_login = False
+            request.META['user'].last_login = str(datetime.datetime.now())
             request.META['user'].save()
             TokenBlackList.objects.create(token=token)
             log.info('password is changed successfully')
             return Response({'response': 'Your password is changed successfully! Now You can access resources'},
-                                status=status.HTTP_200_OK)
+                            status=status.HTTP_200_OK)
         log.info('This link is expired')
         return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -295,8 +321,8 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
         except User.DoesNotExist:
             log.info('This mail id is not registered')
             return Response({'response': 'This Mail id is not registered'}, status=status.HTTP_404_NOT_FOUND)
-        if user and user.is_first_time_login:
-            password = str(random.randint(100000, 999999))
+        if user and user.last_login != None:
+            password = GeneratePassword.generate_password(self)
             user.set_password(raw_password=password)
             user.save()
             data = {
@@ -310,6 +336,7 @@ class RequestNewLoginLinkWithTokenView(GenericAPIView):
             }
             Email.sendEmail(Email.configureAddUserEmail(data))
             log.info('new login link is shared on mail')
-            return Response({'response': 'New login link is shared on your mail'}, status=status.HTTP_200_OK)
+            return Response({'response': 'New login link is shared on your mail', 'token': data['token']},
+                            status=status.HTTP_200_OK)
         log.info('not applicable for this user')
         return Response({'response': 'Not applicable for you!'}, status=status.HTTP_406_NOT_ACCEPTABLE)

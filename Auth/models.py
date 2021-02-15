@@ -1,16 +1,18 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.timezone import now
-
+from .permissions import Role
 
 class User(AbstractUser):
     """This is the base user model which is build extending the AbstractUser models functionalities.
     All the bassic fields like username, first_name, last_name, email, password etc are extended in this model"""
 
+    def get_roles():
+        roles = [Role.ADMIN.value, Role.MENTOR.value, Role.STUDENT.value]
+        return ((role, role) for role in roles)      
+
     mobile = models.CharField(max_length=13)
-    role = models.CharField(choices=(('Mentor', 'Mentor'), ('Engineer', 'Engineer'), ('Admin', 'Admin')),
-                            max_length=10, default="Admin")
-    is_first_time_login = models.BooleanField(default=True)
+    role = models.CharField(choices= get_roles(), max_length=10, default="AnonymousUser")
 
     def __str__(self):
         return self.get_full_name()

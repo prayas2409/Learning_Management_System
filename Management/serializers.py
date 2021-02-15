@@ -210,11 +210,14 @@ class User(serializers.ModelSerializer):
 
 class CourseMentorSerializers(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
+    mentor_id = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
+    course_id = serializers.StringRelatedField(read_only=True)
+
 
     class Meta:
         model = StudentCourseMentor
-        fields = [ 'mentor', 'course']
+        fields = [ 'mentor', 'course','mentor_id','course_id']
 
 class EducationSerializer1(serializers.ModelSerializer):
 
@@ -226,3 +229,4 @@ class EducationSerializer1(serializers.ModelSerializer):
     def validate(self, data):
         data['student_id'] = self.context['student']  # storing logged in student id and returning with data
         return data
+    

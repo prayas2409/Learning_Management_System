@@ -184,6 +184,22 @@ class PerformanceSerializer(serializers.ModelSerializer):
         return data
 
 
+class PerformanceAddSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Performance
+        fields = ['student',  'mentor', 'course' , 'score', 'week_no', 'remark', 'review_date', 'update_by']
+        read_only_fields = ( 'update_by', 'mentor','student', 'course')
+    
+     def validate(self, data):
+        data['student'] = self.context['student']
+        data['mentor'] = self.context['mentor']
+        data['course'] = self.context['course']
+        data['update_by'] = self.context['user']
+        return data
+
+
+
+
 class ExcelDataSerializer(serializers.Serializer):
     file = serializers.FileField(required=True)
 

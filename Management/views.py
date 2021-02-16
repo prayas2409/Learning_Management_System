@@ -12,7 +12,8 @@ from .serializers import CourseSerializer, CourseMentorSerializer, MentorSeriali
     StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
     NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer, \
     AddMentorSerializer,MentorDetailSerializer,MentorCourseSerializer,AddStudentSerializer, \
-        StudentProfileDetails, User, CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer
+    StudentProfileDetails, User, CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer, \
+    PerformanceAddSerializer
 import pandas
 from .utils import ExcelHeader, ValueRange, Pattern, Configure
 from .excel_validator import ExcelException, ExcelValidator
@@ -522,6 +523,47 @@ class StudentPerformance(GenericAPIView):
             return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
         log.info('Records retrieved by ' + request.META['user'].role)
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+    
+
+@method_decorator(TokenAuthentication, name='dispatch')   
+class AddPerformanceAPIView(GenericAPIView):
+    serializer_class = PerformanceAddSerializer
+    permission_classes = [isMentorOrAdmin]
+
+    def post(self, request, mentor_id, student_id, course_id):
+            try:
+                student = Student.objects.get(id=student_id)
+                course = Course.objects.get(id=course_id)
+                if request.META.get('user').role == Role.MENTOR.value:
+                    mentor = Mentor.objects.get(mentor_id=request.Meta.get('user').id)
+                else:
+                    mentor = Mentor.objects.get(id=mentor_id)
+                context = {
+                    'user': request.META.get('user'),
+                    'mentor': mentor,
+                    'course': course,
+                    'student': student
+                }
+                serializer = self.serializer_class(data=request.data, context=context)
+                serializer.is_valid(raise_exception=True)
+                week_no = serializer.validated_data['week_no']
+                course_map_obj = StudentCourseMentor.objects.get(student=student, course=course, mentor=mentor)
+                if course_map_obj:
+                    try:
+                        performance = Performance.objects.get(student=student, week_no=week_no, course=course)
+                        if performance:
+                                   return Response({'response': 'Record is already present'}, status=status.HTTP_400_BAD_REQUEST)  
+                    except Performance.DoesNotExist:
+                        serializer.save()
+                        return Response({'response': 'Record is saved'}, status=status.HTTP_201_CREATED)
+                return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
+            except (Student.DoesNotExist, Course.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist) as e:
+                log.error(e)
+                return Response({'response': str(e)}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                log.error(str(e))
+                return Response({'response': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @method_decorator(TokenAuthentication, name='dispatch')

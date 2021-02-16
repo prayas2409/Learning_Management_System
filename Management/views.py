@@ -783,6 +783,7 @@ class MentorStudentCourse(GenericAPIView):
         try:
             query = self.queryset.filter(mentor_id=mentor_id, course_id=course_id)
             serializer = self.serializer_class(query, many=True)
+
             if not serializer.data:
                 log.error('serializer data is empty, from get_MentorStudentCourse()')
                 return Response({'response': 'Records not found, check mentor_id/Course_id..!!'}, status=status.HTTP_404_NOT_FOUND)

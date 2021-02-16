@@ -2,8 +2,8 @@ from rest_framework import status
 from django.test import TestCase, Client
 from django.urls import reverse
 from ..models import User
-from Management.models import Mentor, Student, Course
-from ..serializers import AddStudentSerializer
+from Management.models import Mentor, Student, Course, StudentCourseMentor
+from ..serializers import AddStudentSerializer, MentorCourseSerializer
 import json
 from rest_framework.response import Response
 import datetime
@@ -103,7 +103,7 @@ class ManagementAPITest(TestCase):
 
     def login_method(self, credentials):
         login = self.client.post(reverse('login'), data=json.dumps(credentials), content_type=CONTENT_TYPE)
-        token = login['authorization']
+        token = login.get('authorization')
         auth_headers = {
             'HTTP_AUTHORIZATION': token,
         }
@@ -115,15 +115,13 @@ class ManagementAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_add_student_with_valid_payload_after_login_by_invalid_credentials(self):
-        self.client.post(reverse('login'), data=json.dumps(self.invalid_login_payload), content_type=CONTENT_TYPE)
-        response = self.client.post(reverse('student'), data=json.dumps(self.valid_add_student_payload),
-                                    content_type=CONTENT_TYPE)
+        auth_headers = self.login_method(self.invalid_login_payload)
+        response = self.client.post(reverse('student'), **auth_headers, data=json.dumps(self.valid_add_student_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_add_student_with_valid_payload_after_login_by_admin_credentials(self):
         auth_headers = self.login_method(self.admin_login_payload)
-        response = self.client.post(reverse('student'), **auth_headers,
-                                    data=json.dumps(self.valid_add_student_payload), content_type=CONTENT_TYPE)
+        response = self.client.post(reverse('student'), **auth_headers, data=json.dumps(self.valid_add_student_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_add_student_with_invalid_payload_after_login_by_admin_credentials(self):
@@ -171,3 +169,31 @@ class ManagementAPITest(TestCase):
         response = self.client.post(reverse('mentor'), **auth_headers,
                                     data=json.dumps(self.valid_mentor_payload), content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+### Test cases for GetMentorDetails API :
+    def test_get_mentor_details_with_valid_payload_without_login(self):
+        response = self.client.get(reverse('mentordetails'), content_type=CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_mentor_details_with_valid_payload_after_login_by_invalid_credentials(self):
+        auth_headers = self.login_method(self.invalid_login_payload)
+        response = self.client.get(reverse('mentordetails'), **auth_headers, content_type=CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_mentor_details_with_valid_payload_after_login_by_admin_credentials(self):
+        auth_headers = self.login_method(self.admin_login_payload)
+        response = self.client.get(reverse('mentordetails'), **auth_headers, content_type=CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_mentor_details_with_valid_payload_after_login_by_mentor_credentials(self):
+        auth_headers = self.login_method(self.mentor_login_payload)
+        response = self.client.get(reverse('mentordetails'), **auth_headers, content_type=CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_mentor_details_with_valid_payload_after_login_by_student_credentials(self):
+        auth_headers = self.login_method(self.student_login_payload)
+        response = self.client.get(reverse('mentordetails'), **auth_headers, content_type=CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    

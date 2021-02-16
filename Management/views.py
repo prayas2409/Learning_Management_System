@@ -669,17 +669,19 @@ class GetMentorDetailsAPIView(GenericAPIView):
         """
         try:
             if request.META['user'].role == Role.ADMIN.value:
-                mentor_list = []
-                for mentor in Mentor.objects.all():
-                    serializer = dict(self.serializer_class(mentor).data)
-                    course_list = self.get_student_count_in_course_list(mentor)
-                    serializer.update({"course":course_list})
-                    mentor_list.append(serializer)
-                if len(serializer) == 0:
+                mentors = Mentor.objects.all()
+                if len(mentors) == 0:
                     log.info("Mentors list empty")
                     return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-                log.info("Mentors retrieved")
-                return Response({'response': mentor_list}, status=status.HTTP_200_OK)
+                else:
+                    mentor_list = []
+                    for mentor in mentors:
+                        serializer = dict(self.serializer_class(mentor).data)
+                        course_list = self.get_student_count_in_course_list(mentor)
+                        serializer.update({"course":course_list})
+                        mentor_list.append(serializer)
+                    log.info("Mentors retrieved")
+                    return Response({'response': mentor_list}, status=status.HTTP_200_OK)
             elif request.META['user'].role == Role.MENTOR.value:
                 mentor = Mentor.objects.get(mentor=request.META['user'])
                 serializer = dict(self.serializer_class(mentor).data)

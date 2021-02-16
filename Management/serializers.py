@@ -4,7 +4,6 @@ import sys
 import re
 from .utils import Pattern
 
-
 sys.path.append('..')
 from Auth.models import User
 
@@ -30,10 +29,11 @@ class CourseMentorSerializer(serializers.ModelSerializer):
 class MentorSerializer(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True, many=True)
+    mid = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Mentor
-        fields = ['id', 'mentor', 'course']
+        fields = ['id', 'mentor', 'mid', 'course']
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -203,9 +203,11 @@ class AddMentorSerializer(serializers.ModelSerializer):
 class MentorDetailSerializer(serializers.ModelSerializer):
     mentor = AddMentorSerializer(required=False)
     name = serializers.CharField(max_length=50, required=False)
+
     class Meta:
         model = User
         fields = ['name', 'email', 'mobile', 'mentor']
+
 
 class MentorCourseSerializer(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
@@ -224,8 +226,8 @@ class AddStudentSerializer(serializers.ModelSerializer):
         model = User
         fields = ['name', 'email', 'mobile', 'student']
 
+
 class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = Performance
         fields = ['student', 'course', 'mentor', 'score', 'week_no', 'remark', 'review_date', 'update_by']
@@ -236,13 +238,13 @@ class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
         return data
 
 
-
-
 class StudentProfileDetails(serializers.ModelSerializer):
     student = serializers.StringRelatedField(read_only=True)
+
     class Meta:
-        model=Student
-        fields = ['student','sid','image','alt_number','relation_with_alt_number_holder','git_link','year_of_experience','current_location','current_address']
+        model = Student
+        fields = ['student', 'sid', 'image', 'alt_number', 'relation_with_alt_number_holder', 'git_link',
+                  'year_of_experience', 'current_location', 'current_address']
 
 
 class User(serializers.ModelSerializer):
@@ -250,22 +252,25 @@ class User(serializers.ModelSerializer):
         model = User
         fields = ['email', 'mobile']
 
+
 class CourseMentorSerializers(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = StudentCourseMentor
-        fields = [ 'mentor', 'course']
+        fields = ['mentor', 'course']
+
 
 class EducationSerializer1(serializers.ModelSerializer):
     class Meta:
         model = Education
-        fields = [ 'degree', 'stream', 'percentage', 'from_date', 'till']
+        fields = ['degree', 'stream', 'percentage', 'from_date', 'till']
 
     def validate(self, data):
         data['student_id'] = self.context['student']  # storing logged in student id and returning with data
         return data
+
 
 class MentorStudentCourseSerializer(serializers.Serializer):
     mentor = serializers.StringRelatedField(read_only=True)

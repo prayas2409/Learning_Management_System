@@ -33,6 +33,5 @@ urlpatterns = [
     path('students/profile/<int:student_id>/',views.Studentprofile.as_view(),name='student-profile'),
     path('student/', views.AddStudent.as_view(), name='student'),
     path('mentor-student-course/<int:mentor_id>/<int:course_id>/', views.MentorStudentCourse.as_view(), name='mentor-student-course'),
-    path('mentor-profile/', views.MentorProfileDetail.as_view(), name='mentor-profile'),
 ]
 

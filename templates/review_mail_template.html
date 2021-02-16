@@ -78,7 +78,11 @@ width: 30%;
         <div class="column" align="center">
             <div class="w3-col.m8">
                   <h2 id="logo">LMS</h2><br>
-                  <h2 id ="menu_text">Week {{week_no}} Review Results</h2><br>
+                  {% if is_update %}
+                      <h2 id ="menu_text">Updated Week {{week_no}} Review Result</h2><br>
+                  {% else %}
+                      <h2 id ="menu_text">Week {{week_no}} Review Results</h2><br>
+                  {% endif %}
                  <div class="column nav nav-pills nav-justified" align="center">
                      <h3>Hi {{name}}, Your week {{week_no}} Review result is following</h3>
                 </div>

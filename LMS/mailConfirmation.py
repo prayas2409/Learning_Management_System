@@ -38,7 +38,8 @@ class Email:
             'week_no': data['week_no'],
             'course': data['course'],
             'mentor': data['mentor'],
-            'remarks': data['remark']
+            'remarks': data['remark'],
+            'is_update': data['is_update']
         })
         email_data = {'email_body': email_body, 'email_subject': 'Fellowship Review Results', 'to_email': data['email']}
         return email_data

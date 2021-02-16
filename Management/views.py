@@ -654,6 +654,14 @@ class GetMentorDetailsAPIView(GenericAPIView):
     serializer_class = MentorCourseSerializer
     permission_classes = [isMentorOrAdmin]
 
+    def get_student_count_in_course_list(self, mentor):
+        courses = mentor.course.all()
+        course_list = []
+        for course in courses:
+            student = StudentCourseMentor.objects.filter(mentor=mentor, course=course).count()
+            course_list.append({str(course):student})
+        return course_list
+
     def get(self, request):
         """
         This function is used for fetching mentor details
@@ -661,19 +669,22 @@ class GetMentorDetailsAPIView(GenericAPIView):
         """
         try:
             if request.META['user'].role == Role.ADMIN.value:
-                serializer = self.serializer_class(Mentor.objects.all(), many=True)
-                if len(serializer.data) == 0:
+                mentor_list = []
+                for mentor in Mentor.objects.all():
+                    serializer = dict(self.serializer_class(mentor).data)
+                    course_list = self.get_student_count_in_course_list(mentor)
+                    serializer.update({"course":course_list})
+                    mentor_list.append(serializer)
+                if len(serializer) == 0:
                     log.info("Mentors list empty")
                     return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
                 log.info("Mentors retrieved")
-                return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+                return Response({'response': mentor_list}, status=status.HTTP_200_OK)
             elif request.META['user'].role == Role.MENTOR.value:
                 mentor = Mentor.objects.get(mentor=request.META['user'])
                 serializer = dict(self.serializer_class(mentor).data)
-                courses = mentor.course.all()
-                for course in courses:
-                    student = StudentCourseMentor.objects.filter(mentor=mentor, course=course).count()
-                    serializer.update({str(course):student})
+                course_list = self.get_student_count_in_course_list(mentor)
+                serializer.update({"course":course_list})
                 log.info("Mentor details retrieved")
                 return Response({'response': serializer}, status=status.HTTP_200_OK)
         except Exception as e:

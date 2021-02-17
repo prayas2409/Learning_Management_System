@@ -659,7 +659,7 @@ class GetMentorDetailsAPIView(GenericAPIView):
         course_list = []
         for course in courses:
             student = StudentCourseMentor.objects.filter(mentor=mentor, course=course).count()
-            course_list.append({str(course):student})
+            course_list.append({"course_name": str(course), "student_count":student})
         return course_list
 
     def get(self, request):

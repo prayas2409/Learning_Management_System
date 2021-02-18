@@ -7,12 +7,7 @@ from .models import Course, Mentor, StudentCourseMentor, Student, Education, Per
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
-from .serializers import CourseSerializer, CourseMentorSerializer, MentorSerializer, UserSerializer, \
-    StudentCourseMentorSerializer, StudentCourseMentorReadSerializer, StudentCourseMentorUpdateSerializer,\
-    StudentSerializer, StudentBasicSerializer, StudentDetailsSerializer, EducationSerializer, CourseMentorSerializerDetails, \
-    NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, PerformanceUpdateViaExcelSerializer, \
-    AddMentorSerializer,MentorDetailSerializer,MentorCourseSerializer,AddStudentSerializer, \
-        StudentProfileDetails, User, CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer
+from .serializer import *
 import pandas
 from .utils import ExcelHeader, ValueRange, Pattern, Configure
 from .excel_validator import ExcelException, ExcelValidator
@@ -27,8 +22,6 @@ from Auth.models import User
 from Management.utils import GeneratePassword, GetFirstNameAndLastName
 import datetime
 from Auth.models import User
-from Management.serializers import CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer, StudentProfileDetails
-
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddCourseAPIView(GenericAPIView):
@@ -638,9 +631,9 @@ class AddMentorAPIView(GenericAPIView):
         try:
             serializer = self.serializer_class(data=request.data)
             serializer.is_valid()
-            name = serializer.validated_data['name']
-            email = serializer.validated_data['email']
-            mobile = serializer.validated_data['mobile']
+            name = serializer.data.get('name')
+            email = serializer.data.get('email')
+            mobile = serializer.data.get('mobile')
             first_name = GetFirstNameAndLastName.get_first_anme(name)
             last_name = GetFirstNameAndLastName.get_last_name(name)
             password = GeneratePassword.generate_password(self)
@@ -658,6 +651,9 @@ class AddMentorAPIView(GenericAPIView):
                 mentor.save()
             log.info('New Mentor is added')
             return Response({'response': f"{mentor} you are added as a Mentor"}, status=status.HTTP_200_OK)
+        except IntegrityError as e:
+            log.error(e)
+            return Response({'response': 'Mentor already exist'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             log.error(e)
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
@@ -755,17 +751,11 @@ class Studentprofile(GenericAPIView):
                 serializer.update({'Mentor&Course':studentCourseSerializer})
             except StudentCourseMentor.DoesNotExist:
                 pass
-
-
-
             log.info(f"Data accessed by {request.META['user'].role}")
             return Response({'response': serializer}, status=status.HTTP_200_OK)
         except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
             log.info('Record not found')
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
-
             return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
 

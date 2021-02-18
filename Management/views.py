@@ -638,9 +638,9 @@ class AddMentorAPIView(GenericAPIView):
         try:
             serializer = self.serializer_class(data=request.data)
             serializer.is_valid()
-            name = serializer.validated_data['name']
-            email = serializer.validated_data['email']
-            mobile = serializer.validated_data['mobile']
+            name = serializer.data.get('name')
+            email = serializer.data.get('email')
+            mobile = serializer.data.get('mobile')
             first_name = GetFirstNameAndLastName.get_first_name(name)
             last_name = GetFirstNameAndLastName.get_last_name(name)
             password = GeneratePassword.generate_password(self)
@@ -657,7 +657,7 @@ class AddMentorAPIView(GenericAPIView):
                 mentor.course.add(course_id)
                 mentor.save()
             log.info('New Mentor is added')
-            return Response({'response': f"{mentor} you are added as a Mentor"}, status=status.HTTP_200_OK)
+            return Response({'response': f"{mentor} has been added as a Mentor"}, status=status.HTTP_200_OK)
         except Exception as e:
             log.error(e)
             return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
@@ -725,7 +725,7 @@ class AddStudent(GenericAPIView):
             name = serializer.validated_data['name']
             email = serializer.validated_data['email']
             mobile = serializer.validated_data['mobile']
-            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            first_name = GetFirstNameAndLastName.get_first_name(name)
             last_name = GetFirstNameAndLastName.get_last_name(name)
             password = GeneratePassword.generate_password(self)
             student = serializer.validated_data['student']

@@ -88,7 +88,7 @@ class StudentBasicSerializer(serializers.ModelSerializer):
 
 class StudentDetailsSerializer(serializers.ModelSerializer):
     student = serializers.StringRelatedField(read_only=True)
-    alt_number = serializers.CharField(max_length=13, min_length=10, required=True)
+    alt_number = serializers.RegexField("^[7-9]{1}[0-9]{9}$")
     relation_with_alt_number_holder = serializers.CharField(read_only=True, max_length=10)
     current_location = serializers.CharField(min_length=3, max_length=30, required=True)
     current_address = serializers.CharField(min_length=5, required=True)
@@ -185,7 +185,7 @@ class ExcelDataSerializer(serializers.Serializer):
 class AddMentorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mentor
-        fields = ['mid', 'mentor', 'course']
+        fields = ['mid', 'image', 'mentor', 'course']
         extra_kwargs = {'mid': {'read_only': True}, 'mentor': {'read_only': True}}
 
 
@@ -204,12 +204,13 @@ class MentorCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mentor
-        fields = ['id', 'mentor_id', 'mid', 'mentor', 'course']
+        fields = ['id','image', 'mentor_id', 'mid', 'mentor', 'course']
 
 
 class AddStudentSerializer(serializers.ModelSerializer):
     student = StudentCourseMentorUpdateSerializer(required=False)
     name = serializers.CharField(max_length=50, required=False)
+    mobile = serializers.RegexField("^[7-9]{1}[0-9]{9}$")
 
     class Meta:
         model = User

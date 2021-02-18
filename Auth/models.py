@@ -12,7 +12,7 @@ class User(AbstractUser):
         return ((role, role) for role in roles)      
 
     mobile = models.CharField(max_length=13)
-    role = models.CharField(choices= get_roles(), max_length=10, default="AnonymousUser")
+    role = models.CharField(choices= get_roles(), max_length=255, default="AnonymousUser")
 
     def __str__(self):
         return self.get_full_name()

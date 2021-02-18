@@ -241,11 +241,14 @@ class User(serializers.ModelSerializer):
 
 class CourseMentorSerializers(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
+    mentor_id = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
+    course_id = serializers.StringRelatedField(read_only=True)
+
 
     class Meta:
         model = StudentCourseMentor
-        fields = [ 'mentor', 'course']
+        fields = [ 'mentor', 'course','mentor_id','course_id']
 
 class EducationSerializer1(serializers.ModelSerializer):
     class Meta:
@@ -258,10 +261,12 @@ class EducationSerializer1(serializers.ModelSerializer):
 
 class MentorStudentCourseSerializer(serializers.Serializer):
     mentor = serializers.StringRelatedField(read_only=True)
-    student = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
+    student_id = serializers.StringRelatedField(read_only=True)
+    student = serializers.StringRelatedField(read_only=True)
     week_no = serializers.StringRelatedField(read_only=True)
     score = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Performance
+        read_only_fields = ('student_id')

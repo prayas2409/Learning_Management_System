@@ -14,8 +14,8 @@ from .serializers import CourseSerializer, CourseMentorSerializer, MentorSeriali
     NewStudentsSerializer, PerformanceSerializer, EducationUpdateSerializer, ExcelDataSerializer, \
     PerformanceUpdateViaExcelSerializer, \
     AddMentorSerializer, MentorDetailSerializer, MentorCourseSerializer, AddStudentSerializer, \
-    StudentProfileDetails, User, CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer, \
-    MentorProfileSerializer
+    StudentProfileDetails, User, CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer
+
 import pandas
 from .utils import ExcelHeader, ValueRange, Pattern, Configure
 from .excel_validator import ExcelException, ExcelValidator
@@ -708,6 +708,7 @@ class GetMentorDetailsAPIView(GenericAPIView):
             return Response({'response': 'Something went wrong'}, status=status.HTTP_403_FORBIDDEN)
 
 
+
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddStudent(GenericAPIView):
     """
@@ -751,6 +752,11 @@ class AddStudent(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class Studentprofile(GenericAPIView):
+    """
+    This api will show the profile data of students
+    Retrieved by student id
+    Accessible by admin,student and for mentors only assigned students under him/her.
+    """
     serializer_class = StudentProfileDetails
     permission_classes = [AllowAny]
     queryset = Student.objects.all()
@@ -758,32 +764,27 @@ class Studentprofile(GenericAPIView):
     def get(self, request, student_id):
 
         try:
-            if request.META['user']:
+            if request.META['user'].role == Role.STUDENT.value:
                 student = Student.objects.get(student_id=request.META['user'])
-
+            elif request.META['user'].role == Role.MENTOR.value:
+                student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.META['user']),
+                                                          student_id=student_id).student
             else:
                 student = self.queryset.get(id=student_id)
             serializer = dict(self.serializer_class(student).data)
-            userSerializer = User(student.student).data
-            serializer.update({'USER_DATA': userSerializer})
+            userSerializer = UserSerializer(student.student).data
+            serializer.update({'USER_DATA':userSerializer})
 
             EducationDetails = EducationSerializer1(student.student).data
             serializer.update({'Education_Details': EducationDetails})
-
-            try:
-                student = StudentCourseMentor.objects.get(student_id=student.id)
-                studentCourseSerializer = CourseMentorSerializers(student).data
-                serializer.update({'Mentor&Course': studentCourseSerializer})
-            except StudentCourseMentor.DoesNotExist:
-                pass
-
+            student = StudentCourseMentor.objects.get(student_id=student.id)
+            studentCourseSerializer = CourseMentorSerializers(student).data
+            serializer.update({'Mentor&Course':studentCourseSerializer})
             log.info(f"Data accessed by {request.META['user'].role}")
             return Response({'response': serializer}, status=status.HTTP_200_OK)
-        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
+        except (Student.DoesNotExist,StudentCourseMentor.DoesNotExist):
             log.info('Record not found')
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
-
-            return Response({'response': 'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -802,6 +803,7 @@ class MentorStudentCourse(GenericAPIView):
         try:
             query = self.queryset.filter(mentor_id=mentor_id, course_id=course_id)
             serializer = self.serializer_class(query, many=True)
+
             if not serializer.data:
                 log.error('serializer data is empty, from get_MentorStudentCourse()')
                 return Response({'response': 'Records not found, check mentor_id/Course_id..!!'},

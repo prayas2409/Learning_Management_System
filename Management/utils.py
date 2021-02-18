@@ -32,7 +32,7 @@ class GetFirstNameAndLastName:
             last_name = ''
         return last_name
 
-    def get_first_anme(name):
+    def get_first_name(name):
         name_data = name.split(' ')
         if len(name_data) > 1:
             first_name_data = name_data[0:-1]

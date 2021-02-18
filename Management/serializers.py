@@ -4,7 +4,6 @@ import sys
 import re
 from .utils import Pattern
 
-
 sys.path.append('..')
 from Auth.models import User
 
@@ -25,16 +24,6 @@ class CourseMentorSerializer(serializers.ModelSerializer):
         model = Mentor
         fields = ['mentor', 'course']
         extra_kwargs = {'mentor': {'read_only': True}}
-
-
-class MentorSerializer(serializers.ModelSerializer):
-    mentor = serializers.StringRelatedField(read_only=True)
-    course = serializers.StringRelatedField(read_only=True, many=True)
-
-    class Meta:
-        model = Mentor
-        fields = ['id', 'mentor', 'course']
-
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -70,7 +59,7 @@ class StudentCourseMentorUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentCourseMentor
         fields = ['course', 'mentor', 'updated_by']
-        extra_kwargs = {'course': {'required': True}, 'mentor': {'required': True}, 'updated_by': {'read_only': True}}
+        extra_kwargs = {'course': {'required': False}, 'mentor': {'required': False}, 'updated_by': {'read_only': True}}
 
     def validate(self, data):
         data['updated_by'] = self.context['user']
@@ -203,9 +192,11 @@ class AddMentorSerializer(serializers.ModelSerializer):
 class MentorDetailSerializer(serializers.ModelSerializer):
     mentor = AddMentorSerializer(required=False)
     name = serializers.CharField(max_length=50, required=False)
+
     class Meta:
         model = User
         fields = ['name', 'email', 'mobile', 'mentor']
+
 
 class MentorCourseSerializer(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
@@ -213,18 +204,19 @@ class MentorCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mentor
-        fields = ['mid', 'mentor', 'course']
+        fields = ['id', 'mentor_id', 'mid', 'mentor', 'course']
 
 
 class AddStudentSerializer(serializers.ModelSerializer):
     student = StudentCourseMentorUpdateSerializer(required=False)
     name = serializers.CharField(max_length=50, required=False)
+
     class Meta:
         model = User
         fields = ['name', 'email', 'mobile', 'student']
 
+
 class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = Performance
         fields = ['student', 'course', 'mentor', 'score', 'week_no', 'remark', 'review_date', 'update_by']
@@ -235,13 +227,13 @@ class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
         return data
 
 
-
-
 class StudentProfileDetails(serializers.ModelSerializer):
     student = serializers.StringRelatedField(read_only=True)
+
     class Meta:
-        model=Student
-        fields = ['student','sid','image','alt_number','relation_with_alt_number_holder','git_link','year_of_experience','current_location','current_address']
+        model = Student
+        fields = ['student', 'sid', 'image', 'alt_number', 'relation_with_alt_number_holder', 'git_link',
+                  'year_of_experience', 'current_location', 'current_address']
 
 
 class User(serializers.ModelSerializer):
@@ -249,29 +241,38 @@ class User(serializers.ModelSerializer):
         model = User
         fields = ['email', 'mobile']
 
+
 class CourseMentorSerializers(serializers.ModelSerializer):
     mentor = serializers.StringRelatedField(read_only=True)
+    mentor_id = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
+    course_id = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = StudentCourseMentor
-        fields = [ 'mentor', 'course']
+        fields = ['mentor', 'course', 'mentor_id', 'course_id']
+
 
 class EducationSerializer1(serializers.ModelSerializer):
     class Meta:
         model = Education
-        fields = [ 'degree', 'stream', 'percentage', 'from_date', 'till']
+        fields = ['degree', 'stream', 'percentage', 'from_date', 'till']
 
     def validate(self, data):
         data['student_id'] = self.context['student']  # storing logged in student id and returning with data
         return data
 
+
 class MentorStudentCourseSerializer(serializers.Serializer):
     mentor = serializers.StringRelatedField(read_only=True)
-    student = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
+    student_id = serializers.StringRelatedField(read_only=True)
+    student = serializers.StringRelatedField(read_only=True)
     week_no = serializers.StringRelatedField(read_only=True)
     score = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Performance
+        read_only_fields = ('student_id')
+
+

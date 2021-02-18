@@ -7,7 +7,7 @@ from .models import Course, Mentor, StudentCourseMentor, Student, Education, Per
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
-from .serializer import *
+from .serializers import *
 import pandas
 from .utils import ExcelHeader, ValueRange, Pattern, Configure
 from .excel_validator import ExcelException, ExcelValidator
@@ -22,6 +22,7 @@ from Auth.models import User
 from Management.utils import GeneratePassword, GetFirstNameAndLastName
 import datetime
 from Auth.models import User
+from Management.serializers import *
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddCourseAPIView(GenericAPIView):
@@ -151,37 +152,33 @@ class DeleteCourseFromMentorListAPIView(GenericAPIView):
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
-class AllMentorDetailsAPIView(GenericAPIView):
-    serializer_class = MentorSerializer
-    permission_classes = [isAdmin]
-    queryset = Mentor.objects.all()
-
-    def get(self, request):
-        serializer = self.serializer_class(self.queryset.all(), many=True)
-        if len(serializer.data) == 0:
-            log.info("Mentors list empty")
-            return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info("Mentors retrieved")
-        return Response({'response': serializer.data}, status=status.HTTP_200_OK)
-
-
-@method_decorator(TokenAuthentication, name='dispatch')
 class MentorDetailsAPIView(GenericAPIView):
-    serializer_class = MentorSerializer
+    serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
 
     def get(self, request, mentor_id):
+        """
+            This API is used to get the Specific Mentor Profile if the user is mentor otherwise Admin can see each
+            mentor's Profile
+            @param mentor_id: mentor primary key @return: Specific Mentor Profile
+        """
         try:
-            mentor = Mentor.objects.get(id=mentor_id)
-            mentorSerializerDict = dict(MentorSerializer(mentor).data)
+            mentor = Mentor.objects.get(mentor_id=mentor_id)
+            mentorSerializerDict = dict(MentorCourseSerializer(mentor).data)
             userSerializer = UserSerializer(mentor.mentor)
             mentorSerializerDict.update(userSerializer.data)
+            log.info("Mentor profile fected.")
             return Response({'response': mentorSerializerDict}, status=status.HTTP_200_OK)
         except Mentor.DoesNotExist:
+            log.error("Mentor does not exist..!!")
             return Response({'response': f"Mentor with id {mentor_id} does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        except Exception:
-            return Response({'response': 'something wrong happened'}, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError as f:
+            log.error(f)
+            return Response({'response': f})
+        except Exception as e:
+            log.error(e)
+            return Response({'response': e}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -261,7 +258,7 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class GetMentorsForSpecificCourse(GenericAPIView):
-    serializer_class = MentorSerializer
+    serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
 
     def get(self, request, course_id):
@@ -510,7 +507,6 @@ class StudentPerformance(GenericAPIView):
         if not serializer.data:
             log.info('Records not found')
             return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info('Records retrieved by ' + {request.META['user'].role})
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
@@ -565,7 +561,7 @@ class UpdateScoreFromExcel(GenericAPIView):
                 file = serializer.validated_data['file']
                 df = pandas.read_excel(file)
                 role = request.META.get('user').role
-                ExcelValidator.validateExcel(df, role)                # Validating the excel file
+                ExcelValidator.validateExcel(df, role)  # Validating the excel file
                 error_message = {}
                 for row_no, row in enumerate(df.iterrows()):
                     try:
@@ -573,8 +569,9 @@ class UpdateScoreFromExcel(GenericAPIView):
                             mentor_id = request.META.get('user').mentor.id
                         else:
                             mentor_id = Mentor.objects.get(mid=row[1][-2]).id
-                        data = Configure.get_configured_excel_data(row, mentor_id) # configuring excel data
-                        serializer = PerformanceUpdateViaExcelSerializer(data=data, context={'user':request.META.get('user')})
+                        data = Configure.get_configured_excel_data(row, mentor_id)  # configuring excel data
+                        serializer = PerformanceUpdateViaExcelSerializer(data=data,
+                                                                         context={'user': request.META.get('user')})
                         if serializer.is_valid():
                             student = serializer.validated_data['student']
                             course = serializer.validated_data['course']
@@ -584,33 +581,36 @@ class UpdateScoreFromExcel(GenericAPIView):
                             duplicate_entry = False
                             performance_list = Performance.objects.filter(student=student)
                             for performance in performance_list:
-                            # checking duplicate entry
+                                # checking duplicate entry
                                 if performance.student == student and performance.week_no == week_no and performance.course == course:
-                                    error_message[f"Row_no-{row_no+1}"] = 'Duplicate Entry found, Data is already saved'
-                                    duplicate_entry = True  
+                                    error_message[
+                                        f"Row_no-{row_no + 1}"] = 'Duplicate Entry found, Data is already saved'
+                                    duplicate_entry = True
                             if not duplicate_entry:
-                                    #checking student mentor course mapping
+                                # checking student mentor course mapping
                                 if map_obj.course == course and map_obj.mentor == mentor and course in mentor.course.all():
                                     serializer.save()
                                 else:
-                                    error_message[f"Row_no-{row_no+1}"] = 'course-mentor-student mapping does not exist'
+                                    error_message[
+                                        f"Row_no-{row_no + 1}"] = 'course-mentor-student mapping does not exist'
                             else:
                                 pass
                         else:
-                            error_message[f"Row_no-{row_no+1}"] = serializer.errors
-                    except (Student.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist, Course.DoesNotExist) as e:
-                        error_message[f"Row_no-{row_no+1}"] = str(e)
+                            error_message[f"Row_no-{row_no + 1}"] = serializer.errors
+                    except (Student.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist,
+                            Course.DoesNotExist) as e:
+                        error_message[f"Row_no-{row_no + 1}"] = str(e)
                 if error_message:
                     msg = 'Record Partially updated! ' + str(error_message)
                     log.error(str(error_message))
                 else:
                     msg = 'Record updated successfully'
-                return Response({"response":msg}, status=status.HTTP_200_OK)
+                return Response({"response": msg}, status=status.HTTP_200_OK)
             log.error(serializer.errors)
-            return Response({'response':serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)    
+            return Response({'response': serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)
         except ExcelException as e:
             log.error(str(e))
-            return Response({'response':str(e)}, status=status.HTTP_400_BAD_REQUEST)  
+            return Response({'response': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             log.error(str(e))
             return Response({'response': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -634,7 +634,7 @@ class AddMentorAPIView(GenericAPIView):
             name = serializer.data.get('name')
             email = serializer.data.get('email')
             mobile = serializer.data.get('mobile')
-            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            first_name = GetFirstNameAndLastName.get_first_name(name)
             last_name = GetFirstNameAndLastName.get_last_name(name)
             password = GeneratePassword.generate_password(self)
             user = User.objects.create(username=email, first_name=first_name, last_name=last_name, email=email,
@@ -663,8 +663,15 @@ class AddMentorAPIView(GenericAPIView):
 class GetMentorDetailsAPIView(GenericAPIView):
     """ This API used for fetching mentor details"""
     serializer_class = MentorCourseSerializer
-    permission_classes = [isAdmin]
-    queryset = Mentor.objects.all()
+    permission_classes = [isMentorOrAdmin]
+
+    def get_student_count_in_course_list(self, mentor):
+        courses = mentor.course.all()
+        course_list = []
+        for course in courses:
+            student = StudentCourseMentor.objects.filter(mentor=mentor, course=course).count()
+            course_list.append({"course_name": str(course), "student_count":student})
+        return course_list
 
     def get(self, request):
         """
@@ -672,17 +679,32 @@ class GetMentorDetailsAPIView(GenericAPIView):
         :return: mentor details
         """
         try:
-            serializer = self.serializer_class(self.queryset.all(), many=True)
-            if len(serializer.data) == 0:
-                log.info("Mentors list empty")
-                return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-            log.info("Mentors retrieved")
-            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+            if request.META['user'].role == Role.ADMIN.value:
+                mentors = Mentor.objects.all()
+                if len(mentors) == 0:
+                    log.info("Mentors list empty")
+                    return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
+                else:
+                    mentor_list = []
+                    for mentor in mentors:
+                        serializer = dict(self.serializer_class(mentor).data)
+                        course_list = self.get_student_count_in_course_list(mentor)
+                        serializer.update({"course":course_list})
+                        mentor_list.append(serializer)
+                    log.info("Mentors retrieved")
+                    return Response({'response': mentor_list}, status=status.HTTP_200_OK)
+            elif request.META['user'].role == Role.MENTOR.value:
+                mentor = Mentor.objects.get(mentor=request.META['user'])
+                serializer = dict(self.serializer_class(mentor).data)
+                course_list = self.get_student_count_in_course_list(mentor)
+                serializer.update({"course":course_list})
+                log.info("Mentor details retrieved")
+                return Response({'response': serializer}, status=status.HTTP_200_OK)
         except Exception as e:
             log.error(e)
             return Response({'response': 'Something went wrong'}, status=status.HTTP_403_FORBIDDEN)
 
-    
+
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddStudent(GenericAPIView):
@@ -699,7 +721,7 @@ class AddStudent(GenericAPIView):
             name = serializer.validated_data['name']
             email = serializer.validated_data['email']
             mobile = serializer.validated_data['mobile']
-            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            first_name = GetFirstNameAndLastName.get_first_name(name)
             last_name = GetFirstNameAndLastName.get_last_name(name)
             password = GeneratePassword.generate_password(self)
             student = serializer.validated_data['student']
@@ -724,8 +746,14 @@ class AddStudent(GenericAPIView):
             log.error(e)
             return Response({'response': 'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @method_decorator(TokenAuthentication, name='dispatch')
 class Studentprofile(GenericAPIView):
+    """
+    This api will show the profile data of students
+    Retrieved by student id
+    Accessible by admin,student and for mentors only assigned students under him/her.
+    """
     serializer_class = StudentProfileDetails
     permission_classes = [AllowAny]
     queryset = Student.objects.all()
@@ -733,30 +761,27 @@ class Studentprofile(GenericAPIView):
     def get(self, request, student_id):
 
         try:
-            if request.META['user']:
+            if request.META['user'].role == Role.STUDENT.value:
                 student = Student.objects.get(student_id=request.META['user'])
-
+            elif request.META['user'].role == Role.MENTOR.value:
+                student = StudentCourseMentor.objects.get(mentor=Mentor.objects.get(mentor_id=request.META['user']),
+                                                          student_id=student_id).student
             else:
                 student = self.queryset.get(id=student_id)
             serializer = dict(self.serializer_class(student).data)
-            userSerializer = User(student.student).data
+            userSerializer = UserSerializer(student.student).data
             serializer.update({'USER_DATA':userSerializer})
 
             EducationDetails = EducationSerializer1(student.student).data
             serializer.update({'Education_Details': EducationDetails})
-
-            try:
-                student = StudentCourseMentor.objects.get(student_id=student.id)
-                studentCourseSerializer = CourseMentorSerializers(student).data
-                serializer.update({'Mentor&Course':studentCourseSerializer})
-            except StudentCourseMentor.DoesNotExist:
-                pass
+            student = StudentCourseMentor.objects.get(student_id=student.id)
+            studentCourseSerializer = CourseMentorSerializers(student).data
+            serializer.update({'Mentor&Course':studentCourseSerializer})
             log.info(f"Data accessed by {request.META['user'].role}")
             return Response({'response': serializer}, status=status.HTTP_200_OK)
-        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist, Education.DoesNotExist):
+        except (Student.DoesNotExist,StudentCourseMentor.DoesNotExist):
             log.info('Record not found')
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
-            return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -775,12 +800,14 @@ class MentorStudentCourse(GenericAPIView):
         try:
             query = self.queryset.filter(mentor_id=mentor_id, course_id=course_id)
             serializer = self.serializer_class(query, many=True)
+
             if not serializer.data:
                 log.error('serializer data is empty, from get_MentorStudentCourse()')
-                return Response({'response': 'Records not found, check mentor_id/Course_id..!!'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'response': 'Records not found, check mentor_id/Course_id..!!'},
+                                status=status.HTTP_404_NOT_FOUND)
             log.info("Fetched List of Students according to Mentor_id and Course_id, from get_MentorStudentCourse() ")
             return Response({'response': serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            log.error("Something went wrong, from get_MentorStudentCourse()")
+            log.error(e, "from get_MentorStudentCourse()")
             return Response("Something went wrong", status=status.HTTP_400_BAD_REQUEST)
 

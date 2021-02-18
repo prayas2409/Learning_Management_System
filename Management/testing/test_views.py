@@ -152,3 +152,8 @@ class TestManagementApp(TestCase):
             reverse('mentor-student-course', kwargs={'mentor_id': self.mentor_course.id, 'course_id': self.course.id}),
             **auth_headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+
+    ### Test cases for MentorDetailsAPI
+

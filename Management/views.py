@@ -27,7 +27,8 @@ from Auth.models import User
 from Management.utils import GeneratePassword, GetFirstNameAndLastName
 import datetime
 from Auth.models import User
-from Management.serializers import CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer, StudentProfileDetails
+from Management.serializers import CourseMentorSerializers, EducationSerializer1, MentorStudentCourseSerializer, \
+    StudentProfileDetails
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -163,17 +164,28 @@ class MentorDetailsAPIView(GenericAPIView):
     permission_classes = [isAdmin]
 
     def get(self, request, mentor_id):
+        """
+            This API is used to get the Specific Mentor Profile if the user is mentor otherwise Admin can see each
+            mentor's Profile
+            @param mentor_id: mentor primary key @return: Specific Mentor Profile
+        """
         try:
             mentor = Mentor.objects.get(mentor_id=mentor_id)
             mentorSerializerDict = dict(MentorCourseSerializer(mentor).data)
             userSerializer = UserSerializer(mentor.mentor)
             mentorSerializerDict.update(userSerializer.data)
+            log.info("Mentor profile fected.")
             return Response({'response': mentorSerializerDict}, status=status.HTTP_200_OK)
         except Mentor.DoesNotExist:
+            log.error("Mentor does not exist..!!")
             return Response({'response': f"Mentor with id {mentor_id} does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        except Exception:
-            return Response({'response': 'something wrong happened'}, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError as f:
+            log.error(f)
+            return Response({'response': f})
+        except Exception as e:
+            log.error(e)
+            return Response({'response': e}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -502,7 +514,6 @@ class StudentPerformance(GenericAPIView):
         if not serializer.data:
             log.info('Records not found')
             return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info('Records retrieved by ' + {request.META['user'].role})
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 
@@ -557,7 +568,7 @@ class UpdateScoreFromExcel(GenericAPIView):
                 file = serializer.validated_data['file']
                 df = pandas.read_excel(file)
                 role = request.META.get('user').role
-                ExcelValidator.validateExcel(df, role)                # Validating the excel file
+                ExcelValidator.validateExcel(df, role)  # Validating the excel file
                 error_message = {}
                 for row_no, row in enumerate(df.iterrows()):
                     try:
@@ -565,8 +576,9 @@ class UpdateScoreFromExcel(GenericAPIView):
                             mentor_id = request.META.get('user').mentor.id
                         else:
                             mentor_id = Mentor.objects.get(mid=row[1][-2]).id
-                        data = Configure.get_configured_excel_data(row, mentor_id) # configuring excel data
-                        serializer = PerformanceUpdateViaExcelSerializer(data=data, context={'user':request.META.get('user')})
+                        data = Configure.get_configured_excel_data(row, mentor_id)  # configuring excel data
+                        serializer = PerformanceUpdateViaExcelSerializer(data=data,
+                                                                         context={'user': request.META.get('user')})
                         if serializer.is_valid():
                             student = serializer.validated_data['student']
                             course = serializer.validated_data['course']
@@ -576,33 +588,36 @@ class UpdateScoreFromExcel(GenericAPIView):
                             duplicate_entry = False
                             performance_list = Performance.objects.filter(student=student)
                             for performance in performance_list:
-                            # checking duplicate entry
+                                # checking duplicate entry
                                 if performance.student == student and performance.week_no == week_no and performance.course == course:
-                                    error_message[f"Row_no-{row_no+1}"] = 'Duplicate Entry found, Data is already saved'
-                                    duplicate_entry = True  
+                                    error_message[
+                                        f"Row_no-{row_no + 1}"] = 'Duplicate Entry found, Data is already saved'
+                                    duplicate_entry = True
                             if not duplicate_entry:
-                                    #checking student mentor course mapping
+                                # checking student mentor course mapping
                                 if map_obj.course == course and map_obj.mentor == mentor and course in mentor.course.all():
                                     serializer.save()
                                 else:
-                                    error_message[f"Row_no-{row_no+1}"] = 'course-mentor-student mapping does not exist'
+                                    error_message[
+                                        f"Row_no-{row_no + 1}"] = 'course-mentor-student mapping does not exist'
                             else:
                                 pass
                         else:
-                            error_message[f"Row_no-{row_no+1}"] = serializer.errors
-                    except (Student.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist, Course.DoesNotExist) as e:
-                        error_message[f"Row_no-{row_no+1}"] = str(e)
+                            error_message[f"Row_no-{row_no + 1}"] = serializer.errors
+                    except (Student.DoesNotExist, Mentor.DoesNotExist, StudentCourseMentor.DoesNotExist,
+                            Course.DoesNotExist) as e:
+                        error_message[f"Row_no-{row_no + 1}"] = str(e)
                 if error_message:
                     msg = 'Record Partially updated! ' + str(error_message)
                     log.error(str(error_message))
                 else:
                     msg = 'Record updated successfully'
-                return Response({"response":msg}, status=status.HTTP_200_OK)
+                return Response({"response": msg}, status=status.HTTP_200_OK)
             log.error(serializer.errors)
-            return Response({'response':serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)    
+            return Response({'response': serializer.errors["non_field_errors"][0]}, status=status.HTTP_400_BAD_REQUEST)
         except ExcelException as e:
             log.error(str(e))
-            return Response({'response':str(e)}, status=status.HTTP_400_BAD_REQUEST)  
+            return Response({'response': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             log.error(str(e))
             return Response({'response': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -735,6 +750,7 @@ class AddStudent(GenericAPIView):
             log.error(e)
             return Response({'response': 'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @method_decorator(TokenAuthentication, name='dispatch')
 class Studentprofile(GenericAPIView):
     """
@@ -772,7 +788,6 @@ class Studentprofile(GenericAPIView):
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-
 @method_decorator(TokenAuthentication, name='dispatch')
 class MentorStudentCourse(GenericAPIView):
     serializer_class = MentorStudentCourseSerializer
@@ -792,10 +807,11 @@ class MentorStudentCourse(GenericAPIView):
 
             if not serializer.data:
                 log.error('serializer data is empty, from get_MentorStudentCourse()')
-                return Response({'response': 'Records not found, check mentor_id/Course_id..!!'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'response': 'Records not found, check mentor_id/Course_id..!!'},
+                                status=status.HTTP_404_NOT_FOUND)
             log.info("Fetched List of Students according to Mentor_id and Course_id, from get_MentorStudentCourse() ")
             return Response({'response': serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            log.error("Something went wrong, from get_MentorStudentCourse()")
+            log.error(e, "from get_MentorStudentCourse()")
             return Response("Something went wrong", status=status.HTTP_400_BAD_REQUEST)
 

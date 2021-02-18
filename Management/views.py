@@ -626,7 +626,7 @@ class AddMentorAPIView(GenericAPIView):
             name = serializer.validated_data['name']
             email = serializer.validated_data['email']
             mobile = serializer.validated_data['mobile']
-            first_name = GetFirstNameAndLastName.get_first_anme(name)
+            first_name = GetFirstNameAndLastName.get_first_name(name)
             last_name = GetFirstNameAndLastName.get_last_name(name)
             password = GeneratePassword.generate_password(self)
             user = User.objects.create(username=email, first_name=first_name, last_name=last_name, email=email,

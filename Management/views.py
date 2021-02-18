@@ -535,7 +535,6 @@ class StudentPerformance(GenericAPIView):
         if not serializer.data:
             log.info('Records not found')
             return Response({'response': 'Records not found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info('Records retrieved by ' + {request.META['user'].role})
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
 

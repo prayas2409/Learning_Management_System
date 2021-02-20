@@ -1,5 +1,6 @@
 import redis
 from decouple import config
+from LMS.settings import REDIS_HOST, REDIS_PORT
 
 class Cache: 
     obj = None
@@ -7,6 +8,6 @@ class Cache:
     @staticmethod
     def getCacheInstance():
         if Cache.obj is None:
-            Cache.obj = redis.Redis(host=config('REDIS_HOST'), port=config('REDIS_PORT'))
+            Cache.obj = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         return Cache.obj
 #  redis configuration

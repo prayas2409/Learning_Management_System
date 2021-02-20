@@ -182,10 +182,10 @@ class MentorDetailsAPIView(GenericAPIView):
                             status=status.HTTP_404_NOT_FOUND)
         except KeyError as f:
             log.error(f)
-            return Response({'response': f})
+            return Response({'response': 'user role doesnt exist'})
         except Exception as e:
             log.error(e)
-            return Response({'response': e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'response': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')

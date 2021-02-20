@@ -1,6 +1,6 @@
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-from .models import Student, Mentor, StudentCourseMentor, Performance
+from .models import Student, Mentor, StudentCourseMentor, Performance, Education
 from .tasks import send_review_result_notification_mail
 
 import sys

@@ -8,7 +8,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import authenticate, login, logout
 from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
-from .middlewares import TokenAuthentication, TokenAuthenticationOnFirstAccess, CantAccessAfterLogin
+from .middlewares import TokenAuthentication, CantAccessAfterLogin
 from django.contrib.auth.hashers import check_password
 from .models import User, TokenBlackList
 import random
@@ -30,13 +30,6 @@ from drf_yasg import openapi
 class UserRegistrationView(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = (isAdmin,)
-
-    def get(self, request):
-        """This API is used to inform the client that the request is genuine and the client can serve the registration page
-        @return: return genuine Admin request
-        """
-        log.info('Admin Request for Add user API')
-        return Response({'response': 'Admin request'}, status=status.HTTP_202_ACCEPTED)
 
     def post(self, request):
         """This API is used to Add user like Mentor,Engineer or another Admin to the system by an Admin
@@ -61,39 +54,16 @@ class UserRegistrationView(GenericAPIView):
             'role': user.role,
             'email': user.email,
             'site': get_current_site(request).domain,
-            'token': JWTAuth.getToken(username=user.username, password=user.password)
         }
         send_registration_mail.delay(data)
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
         return Response(
-            {'response': f"A new {request.data['role']} is added", 'username': username, 'password': password,
-             'token': data['token']}, status=status.HTTP_201_CREATED)
+            {'response': f"A new {request.data['role']} is added", 'username': username, 'password': password}, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
-    token_param_config = openapi.Parameter('token', in_=openapi.IN_QUERY, description='Description',
-                                           type=openapi.TYPE_STRING)
-
-    def get(self, request, token=None):
-        """This API is used to inform the client that its a genuine login request and it can serve the login interface
-        @param request: login request
-        @return: informs client about genuine request
-        """
-        if not request.META.get('user'):
-            token = request.GET.get('token')
-            try:
-                blacklist_token = TokenBlackList.objects.get(token=token)
-            except TokenBlackList.DoesNotExist:
-                blacklist_token = None
-            if blacklist_token:
-                log.info('This login link is already used')
-                return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
-            log.info('Valid login page request')
-            return Response({'response ': ' User can login'}, status=status.HTTP_202_ACCEPTED)
-
-    @swagger_auto_schema(manual_parameters=[token_param_config])
     def post(self, request, token=None):
         """This API is used to log user in
         @param request: basic credential
@@ -106,22 +76,6 @@ class UserLoginView(GenericAPIView):
         user = authenticate(request, username=username, password=password)
         if user:
             role = user.role
-            if user.last_login == None and user.is_superuser == False:
-                token = request.GET.get('token')
-                if JWTAuth.verifyToken(token):
-                    log.info('login successful but need to change password')
-                    response = Response(
-                        {'response': 'You are logged in! Now you need to change password to access resources',
-                         'role': role,
-                         'link': reverse('change-password-on-first-access',
-                                         args=[token])}, status=status.HTTP_200_OK)
-                    response['Authorization'] = JWTAuth.getToken(username=username, password=password)
-                    
-                    return response
-                log.info('Need to use the link shared in mail')
-                return Response({'response': 'You need to use the link shared in your mail for the first time'},
-                                status=status.HTTP_401_UNAUTHORIZED)
-
             user.last_login = str(datetime.datetime.now())
             user.save()
             log.info('successful login')
@@ -253,90 +207,3 @@ class ResetPasswordView(GenericAPIView):
         except User.DoesNotExist:
             log.info('User not found')
             return Response({'response': 'User not found!'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@method_decorator(TokenAuthenticationOnFirstAccess, name='dispatch')
-class ChangePasswordOnFirstAccess(GenericAPIView):
-    serializer_class = ResetPasswordSerializer
-
-    def get(self, request, token):
-        """This API is used to validate the chnage_password_on_first_login link and to inform client whether the
-        client should serve the page or not
-        @param token: jwt token
-        @return: validates the link
-        """
-        try:
-            blacklist_token = TokenBlackList.objects.get(token=token)
-        except TokenBlackList.DoesNotExist:
-            blacklist_token = None
-        if blacklist_token:
-            log.info('This link is already used')
-            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
-        if JWTAuth.verifyToken(token):
-            log.info('valid link')
-            return Response({'response': 'link is Valid'}, status=status.HTTP_202_ACCEPTED)
-        log.info('invalid link')
-        return Response({'response': 'link is invalid'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    def put(self, request, token):
-        """This API is used to change user password on first access
-        @request_parms : new password and confirm password
-        @rtype: saves new password in database and allows to access other resources
-        """
-        try:
-            blacklist_token = TokenBlackList.objects.get(token=token)
-        except TokenBlackList.DoesNotExist:
-            blacklist_token = None
-        if blacklist_token:
-            log.info('This link is already used')
-            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        if JWTAuth.verifyToken(token):
-            request.META['user'].set_password(raw_password=serializer.data.get('new_password'))
-            request.META['user'].last_login = str(datetime.datetime.now())
-            request.META['user'].save()
-            TokenBlackList.objects.create(token=token)
-            log.info('password is changed successfully')
-            return Response({'response': 'Your password is changed successfully! Now You can access resources'},
-                            status=status.HTTP_200_OK)
-        log.info('This link is expired')
-        return Response({'response': 'This link is expired'}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-@method_decorator(CantAccessAfterLogin, name='dispatch')
-class RequestNewLoginLinkWithTokenView(GenericAPIView):
-    serializer_class = ForgotPasswordSerializer
-
-    def post(self, request):
-        """This API is used to generate new login link with token if the first link sent by the admin gets expired
-        @param request: user email
-        @return: sends new link to user email
-        """
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.data.get('email')
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            log.info('This mail id is not registered')
-            return Response({'response': 'This Mail id is not registered'}, status=status.HTTP_404_NOT_FOUND)
-        if user and user.last_login != None:
-            password = GeneratePassword.generate_password(self)
-            user.set_password(raw_password=password)
-            user.save()
-            data = {
-                'name': user.get_full_name(),
-                'username': user.username,
-                'password': password,
-                'role': user.role,
-                'email': user.email,
-                'site': get_current_site(request).domain,
-                'token': JWTAuth.getToken(username=user.username, password=user.password)
-            }
-            Email.sendEmail(Email.configureAddUserEmail(data))
-            log.info('new login link is shared on mail')
-            return Response({'response': 'New login link is shared on your mail', 'token': data['token']},
-                            status=status.HTTP_200_OK)
-        log.info('not applicable for this user')
-        return Response({'response': 'Not applicable for you!'}, status=status.HTTP_406_NOT_ACCEPTABLE)

@@ -6,7 +6,7 @@ from django.template.loader import render_to_string
 class Email:
     @staticmethod
     def configureAddUserEmail(data):
-        absoluteURL = "http://" + data['site'] + reverse('login') + '?token=' + data['token']
+        absoluteURL = "http://" + data['site'] + reverse('login') 
         email_body_template = render_to_string('registration_email_template.html', {
             'absolute_url': absoluteURL,
             'name': data['name'],

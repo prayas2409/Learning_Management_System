@@ -12,8 +12,6 @@ class Email:
             'name': data['name'],
             'username': data['username'],
             'password': data['password'],
-            'role': data['role']
-
         })
         email_data = {'email_body': email_body_template, 'email_subject': 'Access Your Account', 'to_email': data['email']}
         return email_data

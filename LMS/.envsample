@@ -1,5 +1,5 @@
 export APP_SECRET_KEY=
-export DBBACKEND=django.db.backends.postgresql_psycopg2
+export DBBACKEND=
 export DBNAME=
 export DBUSER=
 export DBPASSWORD=
@@ -7,5 +7,5 @@ export DBHOST=
 export DBPORT=
 export MAILUSER=
 export MAILPASSWORD=
-export REDISHOST=localhost
-export REDISPORT=63796379
+export REDISHOST=
+export REDISPORT=

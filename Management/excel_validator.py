@@ -1,8 +1,9 @@
 import enum
+
+from Auth.models import Roles
 from .utils import ExcelHeader, ValueRange, Pattern
 import sys
 sys.path.append('..')
-from Auth.permissions import Role
 
 # class ExceptionType(enum.Enum):
     
@@ -25,7 +26,7 @@ class ExcelValidator:
             input_file_header_set = set(df.columns)
             required_header_set = set([ExcelHeader.SID.value, ExcelHeader.CID.value, 
             ExcelHeader.WEEK.value, ExcelHeader.SCORE.value, ExcelHeader.REVIEW_DATE.value, ExcelHeader.REMARKS.value])
-            if role == Role.ADMIN.value:
+            if role == Roles.objects.get(role='admin'):
                 required_header_set.add(ExcelHeader.MID.value)
             if input_file_header_set != required_header_set:
                 raise ExcelException('Check file Header. '+ str(required_header_set) + ' expeced')
@@ -52,7 +53,7 @@ class ExcelValidator:
 
     @staticmethod
     def validate_pattern(df, role):
-        if role == Role.ADMIN.value:
+        if role == Roles.objects.get(role='admin'):
             if (df[ExcelHeader.MID.value].map(type) == int).any() or not df[ExcelHeader.MID.value].str.match(Pattern.MID.value).all():
                 raise ExcelException('MID pattern does not match, [MI-0000] expected')
 

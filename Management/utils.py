@@ -6,8 +6,8 @@ from . import models
 
 class Degree(enum.Enum):
 
-    TENTH = 'TENTH'
-    HS = 'HS'
+    SSC = 'SSC'
+    HSC = 'HSC'
     UG = 'UG'
     PG = 'PG'
 

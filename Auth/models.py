@@ -29,7 +29,6 @@ class UserManager(BaseUserManager):
 
 
 class Roles(models.Model):
-    role_id = models.IntegerField(default=False, blank=False, null=False, unique=True)
     role = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
@@ -39,9 +38,7 @@ class Roles(models.Model):
     def user_role():
         admin_role = Roles.objects.filter(role='admin')
         if not admin_role:
-            role = Roles(role_id=1, role='admin')
-            role.save()
-            return role
+            admin_role = Roles.objects.create(role='admin')
         return admin_role
 
 

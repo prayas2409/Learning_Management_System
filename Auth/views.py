@@ -48,7 +48,7 @@ class AddRoleAPIView(GenericAPIView):
 
     def post(self, request):
         """This API is used to add role by the admin
-        @param request: role_name,role_id
+        @param request: role_name,
         @return: save role in the database
         """
         try:
@@ -86,10 +86,11 @@ class UserRegistrationView(GenericAPIView):
         email = serializer.data.get('email')
         mobile = serializer.data.get('mobile')
         roles = serializer.data.get('role')
-        role = Roles.objects.get(role_id=roles)
+        role = Roles.objects.get(id=roles)
         password = GeneratePassword.generate_password(self)
         user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name,
                                         email=email, mobile=mobile, role=role, password=password)
+
         data = {
             'name': user.get_full_name(),
             'username': user.username,

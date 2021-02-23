@@ -19,12 +19,10 @@ sys.path.append('..')
 from Auth.permissions import isAdmin, isMentorOrAdmin, OnlyStudent
 from Auth.middlewares import TokenAuthentication
 from LMS.loggerConfig import log
-import random
-from Auth.models import User
+
 from Management.utils import GeneratePassword, GetFirstNameAndLastName
-import datetime
-from Auth.models import User
 from Management.serializer import *
+from Auth.models import User, Roles
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -622,38 +620,43 @@ class AddMentorAPIView(GenericAPIView):
         :param request: mentors details
         :return: add mentor
         """
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid()
-        name = serializer.data.get('name')
-        email = serializer.data.get('email')
-        mobile = serializer.data.get('mobile')
-        first_name = GetFirstNameAndLastName.get_first_name(name)
-        last_name = GetFirstNameAndLastName.get_last_name(name)
-        password = GeneratePassword.generate_password(self)
-        user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name, email=email,
-                                        password=password, mobile=mobile, role=Roles.objects.get(role='mentor'))
-        mentor = Mentor.objects.get(mentor=user)
-        data = {
-            'name': user.get_full_name(),
-            'username': user.username,
-            'password': password,
-            'role': user.role,
-            'email': user.email,
-            'site': get_current_site(request).domain,
-            'token': JWTAuth.getToken(username=user.username, password=user.password)
-        }
-        send_registration_mail.delay(data)
-        courses = serializer.data['mentor'].get('course')
-        for course_id in courses:
-            for mentor_course in mentor.course.all():
-                if course_id == mentor_course.id:
-                    log.info('duplicate entry found')
-                    return Response({'response': 'This course is already added'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-            mentor.course.add(course_id)
-            mentor.save()
-        log.info('New Mentor is added')
-        return Response({'response': f"{mentor} has been added as a Mentor"}, status=status.HTTP_200_OK)
+        try :
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid()
+            name = serializer.data.get('name')
+            email = serializer.data.get('email')
+            mobile = serializer.data.get('mobile')
+            first_name = GetFirstNameAndLastName.get_first_name(name)
+            last_name = GetFirstNameAndLastName.get_last_name(name)
+            password = GeneratePassword.generate_password(self)
+            user = User.objects.create_user(username=email, first_name=first_name, last_name=last_name, email=email,
+                                            password=password, mobile=mobile, role=Roles.objects.get(role='mentor'))
+            mentor = Mentor.objects.get(mentor=user)
+            data = {
+                'name': user.get_full_name(),
+                'username': user.username,
+                'password': password,
+                'email': user.email,
+                'site': get_current_site(request).domain,
+            }
+            send_registration_mail.delay(data)
+            courses = serializer.data['mentor'].get('course')
+            for course_id in courses:
+                for mentor_course in mentor.course.all():
+                    if course_id == mentor_course.id:
+                        log.info('duplicate entry found')
+                        return Response({'response': 'This course is already added'},
+                                        status=status.HTTP_400_BAD_REQUEST)
+                mentor.course.add(course_id)
+                mentor.save()
+            log.info('New Mentor is added')
+            return Response({'response': f"{mentor} has been added as a Mentor"}, status=status.HTTP_200_OK)
+        except IntegrityError as e:
+            log.error(e)
+            return Response({'response':"Mentor already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            log.error(e)
+            return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
@@ -746,10 +749,8 @@ class AddStudent(GenericAPIView):
                         'name': user.get_full_name(),
                         'username': user.username,
                         'password': password,
-                        'role': user.role,
                         'email': user.email,
                         'site': get_current_site(request).domain,
-                        'token': JWTAuth.getToken(username=user.username, password=user.password)
                     }
                     send_registration_mail.delay(data)
                     log.info("Student is created succesfully")

@@ -10,7 +10,8 @@ class RoleSerializer(serializers.ModelSerializer):
     """ This is the add role serializer"""
     class Meta:
         model = Roles
-        fields = ['role_id', 'role']
+        fields = ['id', 'role']
+        extra_kwargs = {'id':{'read_only':True}}
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -43,7 +44,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'password']
-    # extra_kwargs = {'role':{'read_only':True}}
+    
 
 
 class ChangeUserPasswordSerializer(serializers.Serializer):

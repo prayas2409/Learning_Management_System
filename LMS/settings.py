@@ -161,3 +161,4 @@ SWAGGER_SETTINGS = {
 
 REDIS_HOST = os.environ.get('REDISHOST')
 REDIS_PORT = os.environ.get('REDISPORT')
+REDIS_PASS =os.environ.get('REDIS_PASSWORD')

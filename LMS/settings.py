@@ -28,7 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -36,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'corsheaders',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Auth.apps.AuthConfig',
@@ -45,10 +45,13 @@ INSTALLED_APPS = [
     'django_celery_results',
 ]
 
+
+
 REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'}
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -142,7 +145,7 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.environ.get('MAILUSER')
 EMAIL_HOST_PASSWORD = os.environ.get('MAILPASSWORD')
 
-
+CORS_ORIGIN_ALLOW_ALL = True
 
 # celery backend configuration
 

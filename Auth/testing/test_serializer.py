@@ -1,6 +1,6 @@
 from django.test import TestCase
 from ..models import User
-from ..serializers import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, ForgotPasswordSerializer, \
+from ..serializer import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, ForgotPasswordSerializer, \
     ResetPasswordSerializer
 
 

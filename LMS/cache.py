@@ -1,6 +1,6 @@
 import redis
 from decouple import config
-from LMS.settings import REDIS_HOST, REDIS_PORT, REDIS_PASS
+from LMS.settings import REDIS_HOST, REDIS_PORT,REDIS_PASS
 
 class Cache: 
     obj = None

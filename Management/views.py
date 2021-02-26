@@ -1,4 +1,4 @@
-fromfrom django.contrib.sites.shortcuts import get_current_site
+from django.contrib.sites.shortcuts import get_current_site
 from django.db import IntegrityError
 from rest_framework import authentication, status, generics, viewsets
 from rest_framework.response import Response

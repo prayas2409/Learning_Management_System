@@ -9,6 +9,8 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
+from corsheaders.defaults import default_headers
+
 
 import os
 # from decouple import config
@@ -28,7 +30,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'corsheaders',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Auth.apps.AuthConfig',
@@ -45,10 +47,13 @@ INSTALLED_APPS = [
     'django_celery_results',
 ]
 
+
+
 REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'}
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -142,7 +147,16 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.environ.get('MAILUSER')
 EMAIL_HOST_PASSWORD = os.environ.get('MAILPASSWORD')
 
+#CORS
+CORS_ORIGIN_ALLOW_ALL = True
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Authorization',
+]
 
 # celery backend configuration
 
@@ -161,3 +175,4 @@ SWAGGER_SETTINGS = {
 
 REDIS_HOST = os.environ.get('REDISHOST')
 REDIS_PORT = os.environ.get('REDISPORT')
+REDIS_PASS =os.environ.get('REDIS_PASSWORD')

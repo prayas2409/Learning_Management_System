@@ -191,7 +191,7 @@ class AddMentorSerializer(serializers.ModelSerializer):
 
 class MentorDetailSerializer(serializers.ModelSerializer):
     mentor = AddMentorSerializer(required=False)
-    name = serializers.CharField(max_length=50, required=False)
+    name = serializers.CharField(max_length=50)
 
     class Meta:
         model = User

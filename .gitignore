@@ -5,3 +5,4 @@ migrations
 .idea
 Logs
 env
+django.env/

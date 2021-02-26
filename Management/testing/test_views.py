@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 import json
 
-from ..serializers import CourseMentorSerializer
+from ..serializer import CourseMentorSerializer
 
 
 class TestManagementApp(TestCase):

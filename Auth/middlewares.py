@@ -36,7 +36,19 @@ class CantAccessAfterLogin(object):
         self.get_response = get_response
 
     def __call__(self, request, token=None):
-        if JWTAuth.verifyToken(request.headers.get('authorization')):
+        token = request.headers.get('Authorization')
+        jwtData = JWTAuth.verifyToken(token)
+        cache = Cache.getCacheInstance()
+        cache_token = None
+        try:
+            cache_token = cache.hget(jwtData.get('username'), 'auth')
+        except Exception:
+            pass
+
+        if cache_token:
+            cache_token = cache_token.decode('utf-8')    
+        if jwtData and cache_token == token:
             return JsonResponse({'response': 'You need to logout to access this this resource'},
                                 status=status.HTTP_406_NOT_ACCEPTABLE)
-        return self.get_response(request, token)
+        else:
+            return self.get_response(request, token)

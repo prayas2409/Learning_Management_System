@@ -101,12 +101,14 @@ class UserRegistrationView(GenericAPIView):
         send_registration_mail.delay(data)
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
         return Response(
-            {'response': f"A new user registered successfully", 'username': username, 'password': password}, status=status.HTTP_201_CREATED)
+            {'response': f"A new user registered successfully", 'username': username, 'password': password},
+            status=status.HTTP_201_CREATED)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
     serializer_class = UserLoginSerializer
+
     def post(self, request, token=None):
         """This API is used to log user in
         @param request: basic credential
@@ -138,6 +140,8 @@ class UserLoginView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class UserLogoutView(GenericAPIView):
+    serializer_class = UserLoginSerializer
+
     def get(self, request):
         """This API is used to log user out and to clear the user session
         """
@@ -200,23 +204,6 @@ class ForgotPasswordView(GenericAPIView):
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class ResetPasswordView(GenericAPIView):
     serializer_class = ResetPasswordSerializer
-
-    def get(self, request, token):
-        """This API is used to validate the jwt token present in the password reset link
-        @param token: jwt token
-        """
-        try:
-            blacklist_token = TokenBlackList.objects.get(token=token)
-        except TokenBlackList.DoesNotExist:
-            blacklist_token = None
-        if blacklist_token:
-            log.info('This link is already used')
-            return Response({'response': 'This link is already used'}, status=status.HTTP_406_NOT_ACCEPTABLE)
-        jwtTokenData = JWTAuth.verifyToken(token)
-        if jwtTokenData:
-            return Response({'response': token}, status=status.HTTP_200_OK)
-        log.info('invalid link request')
-        return Response({'response': 'Invalid link found'}, status=status.HTTP_403_FORBIDDEN)
 
     def put(self, request, token):
         """This API is used to reset the user password after validating jwt token and its payload

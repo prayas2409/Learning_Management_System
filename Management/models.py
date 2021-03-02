@@ -7,6 +7,10 @@ from Auth.models import User
 
 
 def get_course_id():
+    """
+    This function is used for getting course_id
+    :return: Course id
+    """
     last_record = Course.objects.all().last()
     if last_record:
         str_part, int_part = last_record.cid.split('-')
@@ -17,6 +21,10 @@ def get_course_id():
 
 
 def get_student_id():
+    """
+    This function is used for getting student_id
+    :return: student_id
+    """
     last_record = Student.objects.all().last()
     if last_record:
         str_part, int_part = last_record.sid.split('-')
@@ -27,6 +35,10 @@ def get_student_id():
 
 
 def get_mentor_id():
+    """
+    This function is used for getting mentor_id
+    :return: mentor_id
+    """
     last_record = Mentor.objects.all().last()
     if last_record:
         str_part, int_part = last_record.mid.split('-')
@@ -51,6 +63,9 @@ class Course(models.Model):
 
 
 class Mentor(models.Model):
+    """
+    This is mentor model for mapping course to mentor
+    """
     mentor = models.OneToOneField(User, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='mentor/', max_length=255, null=True, blank=True)
     mid = models.CharField(max_length=10, unique=True, default=get_mentor_id)
@@ -61,6 +76,9 @@ class Mentor(models.Model):
 
 
 class Student(models.Model):
+    """
+    This is student model for student personal's information
+    """
     year_of_experience = (
         (0, 0),
         (1, 1),
@@ -78,13 +96,15 @@ class Student(models.Model):
     current_address = models.CharField(max_length=100, default=None, null=True, blank=True)
     git_link = models.CharField(max_length=30, default=None, null=True, blank=True)
     year_of_experience = models.IntegerField(choices=year_of_experience, default=None, null=True)
-    course_assigned = models.BooleanField(default=False)
 
     def __str__(self):
         return self.student.get_full_name()
 
 
 class Education(models.Model):
+    """
+    This is education model for student education information
+    """
     degree_choice = (
         (Degree.SSC.value, Degree.SSC.value),
         (Degree.HSC.value, Degree.HSC.value),
@@ -106,6 +126,9 @@ class Education(models.Model):
 
 
 class StudentCourseMentor(models.Model):
+    """
+    This model is used for mapping mentor and course to student
+    """
     student = models.OneToOneField(Student, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True)
     mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True)
@@ -114,6 +137,9 @@ class StudentCourseMentor(models.Model):
 
 
 class Performance(models.Model):
+    """
+    This is performance model for student's performance
+    """
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)

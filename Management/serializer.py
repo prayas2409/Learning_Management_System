@@ -9,6 +9,9 @@ from Auth.models import User
 
 
 class CourseSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to add new course, to get all courses, to delete any course and to update any course
+    """
     class Meta:
         model = Course
         fields = ['id', 'course_name', 'cid', 'duration_weeks', 'description', 'course_price']
@@ -18,20 +21,27 @@ class CourseSerializer(serializers.ModelSerializer):
         data['course_name'] = data['course_name'].upper()
         return data
 
-
 class CourseMentorSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to mape any mentor with any course
+    """
     class Meta:
         model = Mentor
-        fields = ['mentor', 'course']
-        extra_kwargs = {'mentor': {'read_only': True}}
+        fields = ['mid', 'mentor', 'course']
+        extra_kwargs = {'mid': {'read_only': True}, 'mentor': {'read_only': True}}
 
 class UserSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to get email, mobile of a user
+    """
     class Meta:
         model = User
-        fields = ['email', 'mobile', 'role']
-
+        fields = ['email', 'mobile']
 
 class StudentCourseMentorSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to assign course and mentor to a student
+    """
     class Meta:
         model = StudentCourseMentor
         fields = ['student', 'course', 'mentor', 'create_by']
@@ -43,6 +53,9 @@ class StudentCourseMentorSerializer(serializers.ModelSerializer):
 
 
 class StudentCourseMentorReadSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to fetch course and mentor details of a student
+    """
     student = serializers.StringRelatedField(read_only=True)
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
@@ -56,6 +69,9 @@ class StudentCourseMentorReadSerializer(serializers.ModelSerializer):
 
 
 class StudentCourseMentorUpdateSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to update course and mentor details of a student
+    """
     class Meta:
         model = StudentCourseMentor
         fields = ['course', 'mentor', 'updated_by']
@@ -67,18 +83,20 @@ class StudentCourseMentorUpdateSerializer(serializers.ModelSerializer):
 
 
 class StudentSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to get all student basic details from student model
+    """
     student = serializers.StringRelatedField(read_only=True)
-    course = serializers.StringRelatedField(read_only=True)
-    mentor = serializers.StringRelatedField(read_only=True)
-    mentor_id = serializers.IntegerField()
-    course_id = serializers.IntegerField()
 
     class Meta:
-        model = StudentCourseMentor
-        fields = ['id', 'course_id', 'student_id', 'mentor_id', 'student', 'course', 'mentor']
-
+        model = Student
+        fields = ['id', 'student', 'student_id', 'sid', 'alt_number', 'relation_with_alt_number_holder', 'current_location',
+                  'current_address', 'git_link', 'year_of_experience']
 
 class StudentBasicSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to get student id and name of a student
+    """
     student = serializers.StringRelatedField(read_only=True)
 
     class Meta:
@@ -87,6 +105,9 @@ class StudentBasicSerializer(serializers.ModelSerializer):
 
 
 class StudentDetailsSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to update student basic details
+    """
     student = serializers.StringRelatedField(read_only=True)
     alt_number = serializers.RegexField("^[7-9]{1}[0-9]{9}$")
     relation_with_alt_number_holder = serializers.CharField(read_only=True, max_length=10)
@@ -109,6 +130,9 @@ class StudentDetailsSerializer(serializers.ModelSerializer):
 
 
 class EducationSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to get and post educational details of a student
+    """
     student = serializers.StringRelatedField(read_only=True)
     institute = serializers.CharField(required=True)
     stream = serializers.CharField(required=True)
@@ -126,6 +150,9 @@ class EducationSerializer(serializers.ModelSerializer):
 
 
 class EducationUpdateSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to update educational details of a student
+    """
     institute = serializers.CharField(required=True)
     stream = serializers.CharField(required=True)
     percentage = serializers.FloatField(required=True)
@@ -137,24 +164,10 @@ class EducationUpdateSerializer(serializers.ModelSerializer):
         fields = ['institute', 'stream', 'percentage', 'from_date', 'till']
 
 
-class CourseMentorSerializerDetails(serializers.ModelSerializer):
-    student = serializers.StringRelatedField(read_only=True)
-    mentor = serializers.StringRelatedField(read_only=True)
-
-    class Meta:
-        model = StudentCourseMentor
-        fields = ['id', 'student_id', 'mentor_id', 'course_id', 'student', 'mentor', 'course']
-
-
-class NewStudentsSerializer(serializers.ModelSerializer):
-    student = serializers.StringRelatedField(read_only=True)
-
-    class Meta:
-        model = Student
-        fields = ['id', 'student', 'course_assigned']
-
-
 class PerformanceSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to update score of a student
+    """
     student = serializers.StringRelatedField(read_only=True)
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
@@ -174,6 +187,9 @@ class PerformanceSerializer(serializers.ModelSerializer):
 
 
 class ExcelDataSerializer(serializers.Serializer):
+    """
+        This serializer is used to validate data of a excel file
+    """
     file = serializers.FileField(required=True)
 
     def validate(self, data):
@@ -181,16 +197,11 @@ class ExcelDataSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid file format. [.xlsx] expected')
         return data
 
-
 class AddMentorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Mentor
-        fields = ['mid', 'image', 'mentor', 'course']
-        extra_kwargs = {'mid': {'read_only': True}, 'mentor': {'read_only': True}}
-
-
-class MentorDetailSerializer(serializers.ModelSerializer):
-    mentor = AddMentorSerializer(required=False)
+    """
+        This serializer is used to create new mentor user and assign course
+    """
+    mentor = CourseMentorSerializer(required=False)
     name = serializers.CharField(max_length=50)
 
     class Meta:
@@ -199,6 +210,9 @@ class MentorDetailSerializer(serializers.ModelSerializer):
 
 
 class MentorCourseSerializer(serializers.ModelSerializer):
+    """
+        This serailizer is used to get mentor-course details
+    """
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True, many=True)
 
@@ -206,8 +220,22 @@ class MentorCourseSerializer(serializers.ModelSerializer):
         model = Mentor
         fields = ['id','image', 'mentor_id', 'mid', 'mentor', 'course']
 
+class GetMentorCourseDetailsSerializer(serializers.ModelSerializer):
+    """
+        This serailizer is used to get mentor-course details
+    """
+    mentor = serializers.StringRelatedField(read_only=True)
+    course = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Mentor
+        fields = ['id','image', 'mentor_id', 'mid', 'mentor', 'course']
+
 
 class AddStudentSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to create a new student user and assign course and mentor
+    """
     student = StudentCourseMentorUpdateSerializer(required=False)
     name = serializers.CharField(max_length=50, required=False)
     mobile = serializers.RegexField("^[7-9]{1}[0-9]{9}$")
@@ -218,6 +246,9 @@ class AddStudentSerializer(serializers.ModelSerializer):
 
 
 class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
+    """
+        This serializer is used to update student performance score from a excel file
+    """
     class Meta:
         model = Performance
         fields = ['student', 'course', 'mentor', 'score', 'week_no', 'remark', 'review_date', 'update_by']
@@ -226,45 +257,12 @@ class PerformanceUpdateViaExcelSerializer(serializers.ModelSerializer):
     def validate(self, data):
         data['update_by'] = self.context['user']
         return data
-
-
-class StudentProfileDetails(serializers.ModelSerializer):
-    student = serializers.StringRelatedField(read_only=True)
-
-    class Meta:
-        model = Student
-        fields = ['student', 'sid', 'image', 'alt_number', 'relation_with_alt_number_holder', 'git_link',
-                  'year_of_experience', 'current_location', 'current_address']
-
-
-class User(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['email', 'mobile']
-
-
-class CourseMentorSerializers(serializers.ModelSerializer):
-    mentor = serializers.StringRelatedField(read_only=True)
-    mentor_id = serializers.StringRelatedField(read_only=True)
-    course = serializers.StringRelatedField(read_only=True)
-    course_id = serializers.StringRelatedField(read_only=True)
-
-    class Meta:
-        model = StudentCourseMentor
-        fields = ['mentor', 'course', 'mentor_id', 'course_id']
-
-
-class EducationSerializer1(serializers.ModelSerializer):
-    class Meta:
-        model = Education
-        fields = ['degree', 'stream', 'percentage', 'from_date', 'till']
-
-    def validate(self, data):
-        data['student_id'] = self.context['student']  # storing logged in student id and returning with data
-        return data
-
+        
 
 class MentorStudentCourseSerializer(serializers.Serializer):
+    """
+        This serializer is used to get student performance
+    """
     mentor = serializers.StringRelatedField(read_only=True)
     course = serializers.StringRelatedField(read_only=True)
     student_id = serializers.StringRelatedField(read_only=True)

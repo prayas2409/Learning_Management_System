@@ -16,5 +16,8 @@ from LMS.mailConfirmation import Email
 
 @shared_task()
 def send_review_result_notification_mail(data):
+    """
+    This function is used for sending review email to student
+    """
     Email.sendEmail(Email.configure_result_notification_mail(data))
     return f"Review result notification mail is sent to {data['email']}"

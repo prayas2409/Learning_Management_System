@@ -4,8 +4,10 @@ from django.http import JsonResponse
 from django.urls import reverse
 from .models import User
 import sys
+
 sys.path.append('..')
 from LMS.cache import Cache
+
 
 class TokenAuthentication(object):
     def __init__(self, get_response):
@@ -13,7 +15,7 @@ class TokenAuthentication(object):
 
     def __call__(self, request, *args, **kwargs):
         token = request.headers.get('Authorization')
-        if token :
+        if token:
             jwtData = JWTAuth.verifyToken(token)
             cache = Cache.getCacheInstance()
             cache_token = None
@@ -51,4 +53,4 @@ class CantAccessAfterLogin(object):
             return JsonResponse({'response': 'You need to logout to access this this resource'},
                                 status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
-            return self.get_response(request, token)
+            return self.get_response(request)

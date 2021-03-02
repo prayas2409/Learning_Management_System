@@ -27,6 +27,9 @@ from Auth.models import User, Roles
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddCourseAPIView(GenericAPIView):
+    """
+    This API used for adding Courses
+    """
     serializer_class = CourseSerializer
     permission_classes = [isAdmin]
 
@@ -50,6 +53,9 @@ class AddCourseAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class AllCoursesAPIView(GenericAPIView):
+    """
+    This API is used to retrieve all course
+    """
     serializer_class = CourseSerializer
     permission_classes = [isAdmin]
     queryset = Course.objects.all()
@@ -65,6 +71,9 @@ class AllCoursesAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class UpdateCourseAPIView(GenericAPIView):
+    """
+    This API used for updating course
+    """
     permission_classes = [isAdmin]
     serializer_class = CourseSerializer
 
@@ -86,6 +95,9 @@ class UpdateCourseAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class DeleteCourseAPIView(GenericAPIView):
+    """
+    This function is used to delete the course
+    """
     serializer_class = CourseSerializer
     permission_classes = [isAdmin]
 
@@ -104,6 +116,9 @@ class DeleteCourseAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class CourseToMentorMapAPIView(GenericAPIView):
+    """
+    This API used to map course to mentor
+    """
     permission_classes = [isAdmin]
     serializer_class = CourseMentorSerializer
 
@@ -128,10 +143,14 @@ class CourseToMentorMapAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class DeleteCourseFromMentorListAPIView(GenericAPIView):
+    """
+    This API is used ti delete course from mentor's list
+    """
     permission_classes = [isAdmin]
 
     def delete(self, request, mentor_id, course_id):
-        """This API is used to delete course from mentor list
+        """
+        This API is used to delete course from mentor list
         """
         try:
             mentor = Mentor.objects.get(id=mentor_id)
@@ -154,6 +173,9 @@ class DeleteCourseFromMentorListAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class MentorDetailsAPIView(GenericAPIView):
+    """
+    This API is used for getting the specific mentor detail
+    """
     serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
 
@@ -164,11 +186,11 @@ class MentorDetailsAPIView(GenericAPIView):
             @param mentor_id: mentor primary key @return: Specific Mentor Profile
         """
         try:
-            mentor = Mentor.objects.get(mentor_id=mentor_id)
+            mentor = Mentor.objects.get(id=mentor_id)
             mentorSerializerDict = dict(MentorCourseSerializer(mentor).data)
             userSerializer = UserSerializer(mentor.mentor)
             mentorSerializerDict.update(userSerializer.data)
-            log.info("Mentor profile fected.")
+            log.info("Mentor profile fetched.")
             return Response({'response': mentorSerializerDict}, status=status.HTTP_200_OK)
         except Mentor.DoesNotExist:
             log.error("Mentor does not exist..!!")
@@ -184,12 +206,16 @@ class MentorDetailsAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentCourseMentorMapAPIView(GenericAPIView):
+    """
+    This API used for mapping mentor and course to student
+    """
     serializer_class = StudentCourseMentorSerializer
     permission_classes = (isAdmin,)
     queryset = StudentCourseMentor.objects.all()
 
     def get(self, request):
-        """This API is used to get student course mentor mapped records
+        """
+        This API is used to get student course mentor mapped records
         """
         serializer = StudentCourseMentorReadSerializer(self.queryset.all(), many=True)
         if not serializer.data:
@@ -199,7 +225,8 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
         return Response({'response': serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
-        """This API is used to post student course mentor mapped record
+        """
+        This API is used to post student course mentor mapped record
         """
         serializer = self.serializer_class(data=request.data, context={'user': request.META['user']})
         serializer.is_valid(raise_exception=True)
@@ -211,7 +238,6 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
             return Response({'response': "Mentor or Course can not be Null"}, status=status.HTTP_400_BAD_REQUEST)
         if course in mentor.course.all():
             serializer.save()
-            student.course_assigned = True
             student.save()
             log.info('Record added')
             return Response({'response': "Record added"}, status=status.HTTP_200_OK)
@@ -222,12 +248,16 @@ class StudentCourseMentorMapAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentCourseMentorUpdateAPIView(GenericAPIView):
+    """
+    This API used to update mentor or course of student
+    """
     serializer_class = StudentCourseMentorUpdateSerializer
     permission_classes = [isAdmin]
     queryset = StudentCourseMentor.objects.all()
 
     def put(self, request, student_id):
-        """This API is used to update student course mentor mapping
+        """
+        This API is used to update student course mentor mapping
         @param request: Course id and mentor id
         @param record_id: record id of StudentCourseMentor model
         @return: updates record
@@ -259,11 +289,15 @@ class StudentCourseMentorUpdateAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class GetMentorsForSpecificCourse(GenericAPIView):
+    """
+    This API is used fetch course oriented mentors
+    """
     serializer_class = MentorCourseSerializer
     permission_classes = [isAdmin]
 
     def get(self, request, course_id):
-        """This API is used to fetch course oriented mentors
+        """
+        This API is used to fetch course oriented mentors
         """
         try:
             course = Course.objects.get(id=course_id)
@@ -281,9 +315,12 @@ class GetMentorsForSpecificCourse(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentsAPIView(GenericAPIView):
+    """
+    This API is used for fetching student records
+    """
     serializer_class = StudentSerializer
     permission_classes = [AllowAny, ]
-    queryset = StudentCourseMentor.objects.all()
+    queryset = Student.objects.all()
 
     def get(self, request):
         """Using this API Admin can see all course assigned students and mentor can see his course assigned students
@@ -309,6 +346,9 @@ class StudentsAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentDetailsAPIView(GenericAPIView):
+    """
+    This API is used to get student basic details as well as education details
+    """
     serializer_class = StudentDetailsSerializer
     permission_classes = [AllowAny]
     queryset = Student.objects.all()
@@ -330,7 +370,7 @@ class StudentDetailsAPIView(GenericAPIView):
             serializer.update(userSerializer)
             try:
                 student = StudentCourseMentor.objects.get(student_id=student.id)
-                studentCourseSerializer = CourseMentorSerializerDetails(student).data
+                studentCourseSerializer = StudentCourseMentorReadSerializer(student).data
                 serializer.update(studentCourseSerializer)
             except StudentCourseMentor.DoesNotExist:
                 pass
@@ -343,6 +383,9 @@ class StudentDetailsAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentsDetailsUpdateAPIView(GenericAPIView):
+    """
+    This API is used to update student basic details
+    """
     serializer_class = StudentDetailsSerializer
     permission_classes = [OnlyStudent]
     queryset = Student.objects.all()
@@ -367,6 +410,9 @@ class StudentsDetailsUpdateAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class EducationDetails(GenericAPIView):
+    """
+    This API is used to fetching student's educational details
+    """
     serializer_class = EducationSerializer
     permission_classes = [AllowAny]
     queryset = Education.objects.all()
@@ -397,6 +443,9 @@ class EducationDetails(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class EducationDetailsAdd(GenericAPIView):
+    """
+    This API is used to add student education details
+    """
     serializer_class = EducationSerializer
     permission_classes = [OnlyStudent]
     queryset = Education.objects.all()
@@ -426,6 +475,9 @@ class EducationDetailsAdd(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class EducationDetailsUpdate(GenericAPIView):
+    """
+    This function is used to update student's educational details
+    """
     serializer_class = EducationUpdateSerializer
     permission_classes = [OnlyStudent]
     queryset = Education.objects.all()
@@ -452,26 +504,41 @@ class EducationDetailsUpdate(GenericAPIView):
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
-class NewStudents(GenericAPIView):
-    serializer_class = NewStudentsSerializer
+class NotMappedStudents(GenericAPIView):
+    serializer_class = StudentSerializer
     permission_classes = [isAdmin]
     queryset = Student.objects.all()
 
     def get(self, request):
-        """Using this API admin will retrieve new students who have not been assigned to any course yet
-        @return : returns list of new students data
+        """Using this API admin will retrieve students who have not been assigned to any course yet
+        @return : returns list of students data that are not mapped 
         """
-        query = self.queryset.filter(course_assigned=False)
-        serializer = self.serializer_class(query, many=True)
-        if not serializer.data:
-            log.info('No records found')
-            return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-        log.info('Records Retrieved by ' + request.META['user'].role.role)
-        return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        try:
+            mapped_student = []
+            query = []
+            for student in StudentCourseMentor.objects.all():
+                mapped_student.append(student.student)
+            for student in self.queryset.all():
+                if not student in mapped_student:
+                    query.append(self.queryset.get(student=User.objects.get(id=student.student_id)))
+            serializer = self.serializer_class(query, many=True)
+            if not serializer.data:
+                log.info('No records found')
+                return Response({'response': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
+            log.info('Records Retrieved by ' + request.META['user'].role.role)
+            return Response({'response': serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            log.error(e)
+            return Response({'response':'Something went wrong!!!'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentPerformance(GenericAPIView):
+    """
+    This API is used to fetching student's performance
+    """
     serializer_class = PerformanceSerializer
     permission_classes = [AllowAny]
     queryset = Performance.objects.all()
@@ -481,7 +548,7 @@ class StudentPerformance(GenericAPIView):
         and admin can see any students all performance
         @param request: get request
         @param student_id: students table's primary key
-        @return: performace records of specific student
+        @return: performance records of specific student
         """
         try:
             if request.META['user'].role == Roles.objects.get(role='student'):
@@ -504,6 +571,9 @@ class StudentPerformance(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class StudentPerfromanceUpdate(GenericAPIView):
+    """
+    This API is used to update student's weekly performance
+    """
     serializer_class = PerformanceSerializer
     permission_classes = [isMentorOrAdmin]
     queryset = Performance.objects.all()
@@ -542,10 +612,18 @@ class StudentPerfromanceUpdate(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class UpdateScoreFromExcel(GenericAPIView):
+    """
+    This API is used for update student's performance score from excel
+    """
     serializer_class = ExcelDataSerializer
     permission_classes = [isMentorOrAdmin]
 
     def post(self, request):
+        """
+        This function is used to update student's performance score from excel
+        :param request:
+        :return:
+        """
         try:
             file = request.FILES.get('file')
             serializer = self.serializer_class(data={'file': file})
@@ -612,7 +690,7 @@ class UpdateScoreFromExcel(GenericAPIView):
 class AddMentorAPIView(GenericAPIView):
     """ This API is used for add mentor"""
     permission_classes = [isAdmin]
-    serializer_class = MentorDetailSerializer
+    serializer_class = AddMentorSerializer
 
     def post(self, request):
         """
@@ -713,7 +791,7 @@ class GetMentorDetailsAPIView(GenericAPIView):
 @method_decorator(TokenAuthentication, name='dispatch')
 class AddStudent(GenericAPIView):
     """
-        This API is used to Add new user student and mapp mentor, course to it
+    This API is used to Add new user student and map mentor, course to it
     """
     serializer_class = AddStudentSerializer
     permission_classes = [isAdmin]
@@ -768,16 +846,20 @@ class AddStudent(GenericAPIView):
 @method_decorator(TokenAuthentication, name='dispatch')
 class Studentprofile(GenericAPIView):
     """
-    This api will show the profile data of students
-    Retrieved by student id
-    Accessible by admin,student and for mentors only assigned students under him/her.
+    This function is used to get student profile
     """
-    serializer_class = StudentProfileDetails
+    serializer_class = StudentSerializer
     permission_classes = [AllowAny]
     queryset = Student.objects.all()
-
+    queryset1=Education.objects.all()
     def get(self, request, student_id):
-
+        """
+        This function will show the profile data of students
+        Retrieved by student id
+        Accessible by admin,student and for mentors only assigned students under him/her.
+        :param student_id: student_id
+        :return: student profile
+        """
         try:
             if request.META['user'].role == Roles.objects.get(role='student'):
                 student = Student.objects.get(student_id=request.META['user'])
@@ -789,21 +871,25 @@ class Studentprofile(GenericAPIView):
             serializer = dict(self.serializer_class(student).data)
             userSerializer = UserSerializer(student.student).data
             serializer.update({'USER_DATA': userSerializer})
-
-            EducationDetails = EducationSerializer1(student.student).data
+            query = self.queryset1.filter(student_id=student_id)
+            EducationDetails = EducationSerializer(query, many=True).data
             serializer.update({'Education_Details': EducationDetails})
             student = StudentCourseMentor.objects.get(student_id=student.id)
-            studentCourseSerializer = CourseMentorSerializers(student).data
+            studentCourseSerializer = GetMentorCourseDetailsSerializer(student).data
             serializer.update({'Mentor&Course': studentCourseSerializer})
+
             log.info(f"Data accessed by {request.META['user'].role.role}")
             return Response({'response': serializer}, status=status.HTTP_200_OK)
-        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist):
-            log.info('Record not found')
+        except (Student.DoesNotExist, StudentCourseMentor.DoesNotExist) as e:
+            log.error(e)
             return Response({'response': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class MentorStudentCourse(GenericAPIView):
+    """
+    This API is used to get list of student according to mentor_id and course_id
+    """
     serializer_class = MentorStudentCourseSerializer
     permission_classes = [isAdmin]
     queryset = Performance.objects.all()

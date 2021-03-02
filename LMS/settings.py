@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+from corsheaders.defaults import default_headers
 import os
 
 # from decouple import config
@@ -47,10 +48,11 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'}
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -148,15 +150,20 @@ SWAGGER_SETTINGS = {
     }
 }
 
+#CORS
+CORS_ORIGIN_ALLOW_ALL = True
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Authorization',
+]
+
 REDIS_HOST = os.environ.get('REDISHOST')
 REDIS_PORT = os.environ.get('REDISPORT')
 REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
-
-
-
-# # celery backend configuration
-# CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
-# CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')
 
 CELERY_BROKER_URL="redis://:{}@{}:{}".format(REDIS_PASSWORD,REDIS_HOST,REDIS_PORT)
 CELERY_RESULT_BACKEND="redis://:{}@{}:{}".format(REDIS_PASSWORD,REDIS_HOST,REDIS_PORT)

@@ -6,3 +6,4 @@ migrations
 Logs
 env
 django.env/
+*.vscode/*

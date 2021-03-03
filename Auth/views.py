@@ -128,6 +128,7 @@ class UserLoginView(GenericAPIView):
                 status=status.HTTP_200_OK)
             jwt_token = JWTAuth.getToken(username=username, password=password)
             response['Authorization'] = jwt_token
+            response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type,Authorization"
             # token is storing in redis cache
             cache = Cache.getCacheInstance()
             cache.hmset(username, {'auth': jwt_token})

@@ -125,7 +125,7 @@ class UserLoginView(GenericAPIView):
             log.info('successful login')
             jwt_token = JWTAuth.getToken(username=username, password=password)
             response = Response(
-                {'response': f'You are logged in successfully', 'username': username, 'role': role.role,'token':jwt_token},
+                {'response': f'You are logged in successfully', 'username': username, 'role': role.role},
                 status=status.HTTP_200_OK)
             response['Authorization'] = jwt_token
             response["Access-Control-Allow-Headers"] = "X-Requested-With,Content-Type,Authorization"

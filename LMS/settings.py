@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'Management.apps.ManagementConfig',
     'drf_yasg',
     'corsheaders',
+    'django_extensions',
     'rest_framework',
     # 'django_celery_results',
 ]

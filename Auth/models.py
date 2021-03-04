@@ -7,6 +7,7 @@ from django.utils.timezone import now
 class UserManager(BaseUserManager):
 
     def create_user(self, username, email, first_name, last_name, role, mobile, password):
+        """ This function is used for creating user"""
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, first_name=first_name, last_name=last_name, role=role,
                           mobile=mobile,
@@ -16,6 +17,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, email, first_name, last_name, mobile, password):
+        """ This function is used for creating superuser"""
         user = self.create_user(username=username, email=email, first_name=first_name, last_name=last_name,
                                 mobile=mobile, role=Roles.user_role(),
                                 password=password)
@@ -29,6 +31,7 @@ class UserManager(BaseUserManager):
 
 
 class Roles(models.Model):
+    """ This model is the role model which is used for adding user role"""
     role = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
@@ -36,6 +39,7 @@ class Roles(models.Model):
 
     @staticmethod
     def user_role():
+        """ This function is used for creating an admin role when superuser create"""
         admin_role = Roles.objects.filter(role='admin')
         if not admin_role:
             admin_role = Roles.objects.create(role='admin')

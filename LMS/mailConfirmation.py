@@ -18,7 +18,7 @@ class Email:
 
     @staticmethod
     def configurePasswordRestEmail(data):
-        absoluteURL = "http://" + data['site'] + reverse('reset-password', args=[data['token']])
+        absoluteURL = "http://" + data['site'] + reverse('reset-password')+"?token="+data['token']
         shortener = pyshorteners.Shortener()
         short_url = shortener.tinyurl.short(absoluteURL)
         email_body = render_to_string('password_reset_mail_template.html', {

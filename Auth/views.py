@@ -1,30 +1,27 @@
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from .serializer import UserSerializer, UserLoginSerializer, ChangeUserPasswordSerializer, \
-    ForgotPasswordSerializer, ResetPasswordSerializer, RoleSerializer
+from .serializer import *
 from .permissions import isAdmin
 from django.contrib.sites.shortcuts import get_current_site
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate
 from .JWTAuthentication import JWTAuth
 from django.utils.decorators import method_decorator
 from .middlewares import TokenAuthentication, CantAccessAfterLogin
 from django.contrib.auth.hashers import check_password
 from .models import User, TokenBlackList, Roles
-import random
 from django.db import IntegrityError
-from django.urls import reverse
 from .tasks import send_registration_mail, send_password_reset_mail
 import sys
 
 sys.path.append('..')
-from LMS.mailConfirmation import Email
 from LMS.loggerConfig import log
 from Management.utils import GeneratePassword
 from LMS.cache import Cache
 import datetime
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from LMS.mailConfirmation import Email
 
 
 class AddRoleAPIView(GenericAPIView):
@@ -70,13 +67,14 @@ class AddRoleAPIView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class UserRegistrationView(GenericAPIView):
+    """ This API is used to Register the User """
     serializer_class = UserSerializer
     permission_classes = (isAdmin,)
 
     def post(self, request):
         """This API is used to Add user like Mentor,Engineer or another Admin to the system by an Admin
          and informs the user about their account creation via email
-         request parms : user related data like username, name, email etc
+         :request params : user related data like username, name, email etc
         """
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -101,12 +99,13 @@ class UserRegistrationView(GenericAPIView):
         send_registration_mail.delay(data)
         log.info(f"Registration is done and mail is sent to {request.data['email']}")
         return Response(
-            {'response': f"A new user registered successfully", 'username': username, 'password': password},
+            {'response': f"A new {role.role} is registered successfully"},
             status=status.HTTP_201_CREATED)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class UserLoginView(GenericAPIView):
+    """ This API is used to logged in the user"""
     serializer_class = UserLoginSerializer
 
     def post(self, request, token=None):
@@ -140,6 +139,7 @@ class UserLoginView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class UserLogoutView(GenericAPIView):
+    """ This Logout API used to logged out the user """
     serializer_class = UserLoginSerializer
 
     def get(self, request):
@@ -155,11 +155,12 @@ class UserLogoutView(GenericAPIView):
 
 @method_decorator(TokenAuthentication, name='dispatch')
 class ChangeUserPasswordView(GenericAPIView):
+    """ This API is used to change the user password """
     serializer_class = ChangeUserPasswordSerializer
 
     def put(self, request):
         """This API is used to change user password
-        @request_parms = old password, new password and confirm password
+        @request_params = old password, new password and confirm password
         @rtype: saves new password in database
         """
         serializer = self.serializer_class(data=request.data)
@@ -176,6 +177,7 @@ class ChangeUserPasswordView(GenericAPIView):
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class ForgotPasswordView(GenericAPIView):
+    """ This API is used to send reset password link when user forgot password """
     serializer_class = ForgotPasswordSerializer
 
     def post(self, request, token=None):
@@ -187,8 +189,8 @@ class ForgotPasswordView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         try:
             user = User.objects.get(email=serializer.data.get('email'))
-        except User.DoesNotExist:
-            log.info("email id not found")
+        except User.DoesNotExist as e:
+            log.error(e)
             return Response({'response': 'Email not found'}, status=status.HTTP_404_NOT_FOUND)
         email_data = {
             'name': user.get_full_name(),
@@ -198,17 +200,20 @@ class ForgotPasswordView(GenericAPIView):
         }
         send_password_reset_mail.delay(email_data)
         log.info('reset password link is sent to mail')
+        print(email_data['token'])
         return Response({'response': 'Password reset link is sent to your mail'}, status=status.HTTP_200_OK)
 
 
 @method_decorator(CantAccessAfterLogin, name='dispatch')
 class ResetPasswordView(GenericAPIView):
+    """ This API used to reset the password"""
     serializer_class = ResetPasswordSerializer
 
-    def put(self, request, token):
+    def put(self, request):
         """This API is used to reset the user password after validating jwt token and its payload
         @param token: jwt token
         """
+        token = request.GET.get('token')
         try:
             blacklist_token = TokenBlackList.objects.get(token=token)
         except TokenBlackList.DoesNotExist:
@@ -235,6 +240,6 @@ class ResetPasswordView(GenericAPIView):
                 return Response({'response': 'Your Password is reset'}, status=status.HTTP_200_OK)
             log.info('password does not match')
             return Response({'response': 'Password does not match'}, status=status.HTTP_401_UNAUTHORIZED)
-        except User.DoesNotExist:
-            log.info('User not found')
+        except User.DoesNotExist as e:
+            log.error(e)
             return Response({'response': 'User not found!'}, status=status.HTTP_404_NOT_FOUND)

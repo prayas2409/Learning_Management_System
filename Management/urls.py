@@ -22,7 +22,7 @@ urlpatterns = [
     path('students-education-details/<int:record_id>', views.EducationDetailsUpdate.as_view(),
          name='education-details-update'),
     path('students-education-details/', views.EducationDetailsAdd().as_view(), name='education-details-add'),
-    path('students-information/', views.NewStudents.as_view(), name='students-information'),
+    path('not-mapped-student/', views.NotMappedStudents.as_view(), name='students-information'),
     path('students-performance/<int:student_id>/', views.StudentPerformance.as_view(), name='student-performance'),
     path('students-performance/<int:student_id>/<int:week_no>', views.StudentPerfromanceUpdate.as_view(),
          name='performance-update'),

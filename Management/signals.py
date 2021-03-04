@@ -10,6 +10,9 @@ from Auth.models import User, Roles
 
 @receiver(signal=post_save, sender=User)
 def create_student_or_mentor(sender, instance, created, **kwargs):
+    """
+    This function is used for creating user instance based on user role
+    """
     if created:
         if instance.role == Roles.objects.get(role='admin'):
             pass
@@ -17,7 +20,6 @@ def create_student_or_mentor(sender, instance, created, **kwargs):
             Student.objects.create(student=instance)
         elif instance.role == Roles.objects.get(role='mentor'):
             Mentor.objects.create(mentor=instance)
-
 
 
 @receiver(signal=post_save, sender=StudentCourseMentor)

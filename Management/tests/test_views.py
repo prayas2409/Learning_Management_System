@@ -2,8 +2,8 @@ from rest_framework import status
 from django.test import TestCase, Client
 from django.urls import reverse
 from Auth.models import User, Roles
-from Management.models import Mentor, Student, Course, StudentCourseMentor
-from ..serializer import AddStudentSerializer, MentorCourseSerializer
+from Management.models import Mentor, Student, Course, StudentCourseMentor,Education
+from ..serializer import AddStudentSerializer, MentorCourseSerializer,StudentProfileDetails,UserSerializer,EducationSerializer1,CourseMentorSerializers
 import json
 from rest_framework.response import Response
 import datetime
@@ -205,3 +205,4 @@ class ManagementAPITest(TestCase):
         auth_headers = self.login_method(self.student_login_payload)
         response = self.client.get(reverse('mentor-details'), **auth_headers, content_type=CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+

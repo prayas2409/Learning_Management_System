@@ -164,7 +164,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 REDIS_HOST = os.environ.get('REDISHOST')
 REDIS_PORT = os.environ.get('REDISPORT')
 REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
-
+#
 #Celery Conf
 # CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 # CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')

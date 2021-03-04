@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'Auth.apps.AuthConfig',
     'Management.apps.ManagementConfig',
     'drf_yasg',
+    'corsheaders',
     'rest_framework',
     # 'django_celery_results',
 ]
